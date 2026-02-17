@@ -57,6 +57,14 @@ export interface RiskProfile {
   questionnaireVersion: string
 }
 
+export interface GoalMilestone {
+  id: string
+  goalId: string
+  percentage: number
+  achievedAt?: string
+  celebrated: boolean
+}
+
 export interface Goal {
   id: string
   clientId: string
@@ -68,6 +76,8 @@ export interface Goal {
   monthlyContribution: number
   createdAt: string
   updatedAt: string
+  milestones?: GoalMilestone[]
+  isCustom?: boolean
 }
 
 export interface Portfolio {

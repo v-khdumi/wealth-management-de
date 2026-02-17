@@ -89,6 +89,27 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Progression**: View goal template library → Filter by category (Popular, Retirement, Home, Education, Other) → Search for specific goals → Select template → Review suggested amount and timeline → Adjust sliders to customize → Read helpful tips → See calculated monthly contribution → Create goal
 - **Success criteria**: Templates cover major life milestones, amounts reflect realistic benchmarks, tips provide actionable guidance, customization allows personalization while maintaining realistic ranges
 
+### Age and Risk-Based Goal Recommendations
+- **Functionality**: Intelligent template suggestions based on user's age and risk profile
+- **Purpose**: Surface the most relevant goals for each user's life stage and financial personality
+- **Trigger**: Open goal template dialog with "For You" personalized tab
+- **Progression**: System analyzes age and risk score → Selects 3-6 most relevant templates → Displays in "For You" tab with explanation → User can explore recommendations or browse all templates
+- **Success criteria**: Recommendations feel personally relevant, explanation clearly states why goals were selected (age and risk factors), users under 30 see emergency fund and first home goals, users 45+ see retirement and education goals, high risk users see entrepreneurial goals, conservative users see safety-focused goals
+
+### Custom Goal Creation
+- **Functionality**: Create completely personalized financial goals beyond standard templates
+- **Purpose**: Allow users to plan for unique dreams and aspirations not covered by templates
+- **Trigger**: Click "Create Custom Goal" option in template dialog
+- **Progression**: Open custom goal form → Enter goal name → Select category → Set target amount with slider → Set time horizon → Preview monthly contribution → Create goal
+- **Success criteria**: Form is simple and intuitive, sliders allow wide range of amounts ($1k-$2M) and timelines (1-40 years), calculations shown in real-time, custom goals clearly marked in goals list
+
+### Goal Progress Milestones with Celebrations
+- **Functionality**: Track achievement of milestone percentages (10%, 25%, 50%, 75%, 100%) with animated celebrations
+- **Purpose**: Maintain motivation and celebrate financial progress along the journey
+- **Trigger**: When goal progress crosses a milestone threshold (simulated via demo button or actual contribution updates)
+- **Progression**: Progress updates → System detects milestone crossed → Celebration animation appears with confetti → Shows achievement message → Displays current vs target amounts → Encourages continued progress → Milestone badge added to goal card
+- **Success criteria**: Animations feel delightful not intrusive, messages are encouraging and personalized, milestones are tracked and prevent duplicate celebrations, goal cards show milestone badges, confetti uses theme colors and feels celebratory
+
 ### Activity History & Transparency
 - **Functionality**: Complete log of all transactions, AI interactions, and portfolio changes
 - **Purpose**: Build trust through total transparency and help clients understand past decisions

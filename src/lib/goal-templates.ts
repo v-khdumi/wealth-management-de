@@ -264,3 +264,57 @@ export function getMostPopularTemplates(limit: number = 6): GoalTemplate[] {
     .sort((a, b) => a.popularityRank - b.popularityRank)
     .slice(0, limit)
 }
+
+export function getRecommendedTemplates(age: number, riskScore: number): GoalTemplate[] {
+  const recommended: GoalTemplate[] = []
+  
+  if (age < 30) {
+    recommended.push(
+      ...GOAL_TEMPLATES.filter(t => 
+        t.id === 'emergency-fund' || 
+        t.id === 'house-downpayment' ||
+        t.id === 'retirement-early'
+      )
+    )
+  } else if (age >= 30 && age < 45) {
+    recommended.push(
+      ...GOAL_TEMPLATES.filter(t => 
+        t.id === 'house-upgrade' || 
+        t.id === 'education-college' ||
+        t.id === 'retirement-comfortable'
+      )
+    )
+  } else if (age >= 45 && age < 60) {
+    recommended.push(
+      ...GOAL_TEMPLATES.filter(t => 
+        t.id === 'retirement-comfortable' || 
+        t.id === 'education-college' ||
+        t.id === 'vacation-home'
+      )
+    )
+  } else {
+    recommended.push(
+      ...GOAL_TEMPLATES.filter(t => 
+        t.id === 'retirement-comfortable' || 
+        t.id === 'world-travel' ||
+        t.id === 'vacation-home'
+      )
+    )
+  }
+
+  if (riskScore >= 7) {
+    if (!recommended.find(t => t.id === 'business-startup')) {
+      const businessTemplate = GOAL_TEMPLATES.find(t => t.id === 'business-startup')
+      if (businessTemplate) recommended.push(businessTemplate)
+    }
+  }
+
+  if (riskScore <= 4) {
+    if (!recommended.find(t => t.id === 'emergency-fund')) {
+      const emergencyTemplate = GOAL_TEMPLATES.find(t => t.id === 'emergency-fund')
+      if (emergencyTemplate) recommended.push(emergencyTemplate)
+    }
+  }
+
+  return recommended.slice(0, 6)
+}

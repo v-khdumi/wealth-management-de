@@ -25,7 +25,9 @@ import { AIAssistant } from './AIAssistant'
 import { InsightsDashboard } from './InsightsDashboard'
 import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
 import { GoalTemplateDialog } from './GoalTemplateDialog'
-import type { Goal } from '@/lib/types'
+import { CustomGoalDialog } from './CustomGoalDialog'
+import { MilestoneCelebration } from './MilestoneCelebration'
+import type { Goal, GoalMilestone, GoalType } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -46,6 +48,13 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
+  const [showCustomGoalDialog, setShowCustomGoalDialog] = useState(false)
+  const [celebrationData, setCelebrationData] = useState<{
+    goalName: string
+    percentage: number
+    currentAmount: number
+    targetAmount: number
+  } | null>(null)
 
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
@@ -63,14 +72,88 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
     : 0
 
+  const handleSimulateContribution = (goalId: string) => {
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          const newAmount = Math.min(
+            g.currentAmount + g.monthlyContribution * 3,
+            g.targetAmount
+          )
+          const updated = { 
+            ...g, 
+            currentAmount: newAmount,
+            updatedAt: new Date().toISOString() 
+          }
+          checkMilestones(updated)
+          return updated
+        }
+        return g
+      })
+      return updatedGoals
+    })
+    
+    toast.success('Progress Updated', {
+      description: 'Simulated 3 months of contributions',
+    })
+  }
+
   const handleUpdateGoalContribution = (goalId: string, newContribution: number) => {
-    setGoals((currentGoals) =>
-      (currentGoals || []).map((g) =>
-        g.id === goalId
-          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
-          : g
-      )
-    )
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          const updated = { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          checkMilestones(updated)
+          return updated
+        }
+        return g
+      })
+      return updatedGoals
+    })
+  }
+
+  const checkMilestones = (goal: Goal) => {
+    const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+    const milestones = [10, 25, 50, 75, 100]
+    
+    const existingMilestones = goal.milestones || []
+    
+    for (const milestone of milestones) {
+      if (progress >= milestone) {
+        const alreadyAchieved = existingMilestones.find(
+          m => m.percentage === milestone && m.achievedAt
+        )
+        
+        if (!alreadyAchieved) {
+          setCelebrationData({
+            goalName: goal.name,
+            percentage: milestone,
+            currentAmount: goal.currentAmount,
+            targetAmount: goal.targetAmount,
+          })
+          
+          setGoals((currentGoals) =>
+            (currentGoals || []).map((g) => {
+              if (g.id === goal.id) {
+                const updatedMilestones: GoalMilestone[] = [
+                  ...(g.milestones || []),
+                  {
+                    id: `milestone-${goal.id}-${milestone}`,
+                    goalId: goal.id,
+                    percentage: milestone,
+                    achievedAt: new Date().toISOString(),
+                    celebrated: true,
+                  },
+                ]
+                return { ...g, milestones: updatedMilestones }
+              }
+              return g
+            })
+          )
+          break
+        }
+      }
+    }
   }
 
   const handleCreateGoalFromTemplate = (template: GoalTemplate, customAmount: number, customYears: number) => {
@@ -90,12 +173,47 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       monthlyContribution: monthlyContribution,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      milestones: [],
+      isCustom: false,
     }
     
     setGoals((currentGoals) => [...(currentGoals || []), newGoal])
     
     toast.success('Goal Created!', {
       description: `${template.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
+    })
+  }
+
+  const handleCreateCustomGoal = (goalData: {
+    name: string
+    type: GoalType
+    targetAmount: number
+    targetYears: number
+  }) => {
+    const targetDate = new Date()
+    targetDate.setFullYear(targetDate.getFullYear() + goalData.targetYears)
+    
+    const monthlyContribution = Math.ceil(goalData.targetAmount / (goalData.targetYears * 12))
+    
+    const newGoal: Goal = {
+      id: `goal-${Date.now()}`,
+      clientId: clientId,
+      type: goalData.type,
+      name: goalData.name,
+      targetAmount: goalData.targetAmount,
+      currentAmount: 0,
+      targetDate: targetDate.toISOString(),
+      monthlyContribution: monthlyContribution,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      milestones: [],
+      isCustom: true,
+    }
+    
+    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
+    
+    toast.success('Custom Goal Created!', {
+      description: `${goalData.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
     })
   }
 
@@ -334,13 +452,29 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                       const gap = calculateGoalGap(goal)
                       const required = calculateRequiredMonthlyContribution(goal)
                       const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+                      const achievedMilestones = (goal.milestones || []).filter(m => m.achievedAt).length
 
                       return (
                         <div key={goal.id} className="p-6 border-2 rounded-xl space-y-4 hover:border-primary/30 transition-colors">
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="font-bold text-xl mb-1">{goal.name}</p>
-                              <Badge variant="secondary">{goal.type}</Badge>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-bold text-xl">{goal.name}</p>
+                                {goal.isCustom && (
+                                  <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
+                                    Custom
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary">{goal.type}</Badge>
+                                {achievedMilestones > 0 && (
+                                  <Badge variant="outline" className="gap-1 bg-accent/10 text-accent border-accent/30">
+                                    <Target size={12} weight="fill" />
+                                    {achievedMilestones} {achievedMilestones === 1 ? 'milestone' : 'milestones'}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="text-right">
@@ -407,6 +541,18 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               </Button>
                             </div>
                           )}
+
+                          <div className="pt-2 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleSimulateContribution(goal.id)}
+                              className="w-full gap-2 text-xs text-muted-foreground hover:text-primary"
+                            >
+                              <TrendUp size={14} />
+                              Simulate 3 Months Progress (Demo)
+                            </Button>
+                          </div>
                         </div>
                       )
                     })
@@ -439,7 +585,27 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         open={showTemplateDialog}
         onOpenChange={setShowTemplateDialog}
         onSelectTemplate={handleCreateGoalFromTemplate}
+        onCreateCustom={() => setShowCustomGoalDialog(true)}
+        userAge={age}
+        userRiskScore={riskProfile.score}
       />
+
+      <CustomGoalDialog
+        open={showCustomGoalDialog}
+        onOpenChange={setShowCustomGoalDialog}
+        onCreateGoal={handleCreateCustomGoal}
+      />
+
+      {celebrationData && (
+        <MilestoneCelebration
+          open={!!celebrationData}
+          onOpenChange={(open) => !open && setCelebrationData(null)}
+          goalName={celebrationData.goalName}
+          milestonePercentage={celebrationData.percentage}
+          currentAmount={celebrationData.currentAmount}
+          targetAmount={celebrationData.targetAmount}
+        />
+      )}
     </div>
   )
 }

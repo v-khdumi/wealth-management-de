@@ -24,22 +24,35 @@ import {
   MagnifyingGlass,
   TrendUp,
   Lightbulb,
+  Plus,
+  ShieldCheck,
+  UserCircle,
 } from '@phosphor-icons/react'
-import { getTemplatesByType, getMostPopularTemplates, type GoalTemplate } from '@/lib/goal-templates'
+import { getTemplatesByType, getMostPopularTemplates, getRecommendedTemplates, type GoalTemplate } from '@/lib/goal-templates'
 import type { GoalType } from '@/lib/types'
 
 interface GoalTemplateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSelectTemplate: (template: GoalTemplate, customAmount: number, customYears: number) => void
+  onCreateCustom?: () => void
+  userAge?: number
+  userRiskScore?: number
 }
 
-export function GoalTemplateDialog({ open, onOpenChange, onSelectTemplate }: GoalTemplateDialogProps) {
+export function GoalTemplateDialog({ 
+  open, 
+  onOpenChange, 
+  onSelectTemplate,
+  onCreateCustom,
+  userAge,
+  userRiskScore,
+}: GoalTemplateDialogProps) {
   const [selectedTemplate, setSelectedTemplate] = useState<GoalTemplate | null>(null)
   const [customAmount, setCustomAmount] = useState<number>(0)
   const [customYears, setCustomYears] = useState<number>(0)
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeTab, setActiveTab] = useState<'popular' | GoalType>('popular')
+  const [activeTab, setActiveTab] = useState<'recommended' | 'popular' | GoalType>('recommended')
 
   const handleTemplateClick = (template: GoalTemplate) => {
     setSelectedTemplate(template)
@@ -60,6 +73,9 @@ export function GoalTemplateDialog({ open, onOpenChange, onSelectTemplate }: Goa
   }
 
   const popularTemplates = getMostPopularTemplates(6)
+  const recommendedTemplates = (userAge !== undefined && userRiskScore !== undefined) 
+    ? getRecommendedTemplates(userAge, userRiskScore)
+    : []
   const retirementTemplates = getTemplatesByType('RETIREMENT')
   const houseTemplates = getTemplatesByType('HOUSE')
   const educationTemplates = getTemplatesByType('EDUCATION')
@@ -219,18 +235,43 @@ export function GoalTemplateDialog({ open, onOpenChange, onSelectTemplate }: Goa
             Choose a Goal Template
           </DialogTitle>
           <DialogDescription>
-            Start with a pre-configured template and customize it to your needs
+            Start with a pre-configured template or create a custom goal
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative mb-4">
-          <MagnifyingGlass size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search templates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+        <div className="space-y-4">
+          <div className="relative">
+            <MagnifyingGlass size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search templates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {onCreateCustom && (
+            <button
+              onClick={() => {
+                onOpenChange(false)
+                onCreateCustom()
+              }}
+              className="w-full p-4 border-2 border-dashed border-primary/40 rounded-xl hover:border-primary hover:bg-primary/5 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Plus size={24} weight="bold" className="text-white" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-bold text-foreground">Create Custom Goal</p>
+                  <p className="text-sm text-muted-foreground">
+                    Design your own personalized financial goal from scratch
+                  </p>
+                </div>
+                <ArrowRight size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
+              </div>
+            </button>
+          )}
         </div>
 
         {searchQuery && filteredTemplates.length > 0 ? (
@@ -254,13 +295,52 @@ export function GoalTemplateDialog({ open, onOpenChange, onSelectTemplate }: Goa
           </div>
         ) : (
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className={`grid w-full ${recommendedTemplates.length > 0 ? 'grid-cols-6' : 'grid-cols-5'}`}>
+              {recommendedTemplates.length > 0 && (
+                <TabsTrigger value="recommended" className="gap-1.5">
+                  <Sparkle size={14} weight="fill" />
+                  For You
+                </TabsTrigger>
+              )}
               <TabsTrigger value="popular">Popular</TabsTrigger>
               <TabsTrigger value="RETIREMENT">Retirement</TabsTrigger>
               <TabsTrigger value="HOUSE">Home</TabsTrigger>
               <TabsTrigger value="EDUCATION">Education</TabsTrigger>
               <TabsTrigger value="OTHER">Other</TabsTrigger>
             </TabsList>
+
+            {recommendedTemplates.length > 0 && (
+              <TabsContent value="recommended" className="flex-1 mt-4 overflow-hidden">
+                <div className="mb-4 p-4 bg-gradient-to-r from-accent/10 to-primary/10 border-2 border-accent/30 rounded-xl">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-accent/20">
+                      <Sparkle size={20} weight="fill" className="text-accent" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-accent-foreground mb-1">
+                        Personalized Recommendations
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Based on your age ({userAge}) and risk profile (score: {userRiskScore}/10), 
+                        these goals are tailored for your life stage and financial personality.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="grid md:grid-cols-2 gap-4 pb-4">
+                    {recommendedTemplates.map((template) => (
+                      <TemplateCard
+                        key={template.id}
+                        template={template}
+                        onClick={() => handleTemplateClick(template)}
+                        isRecommended={true}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            )}
 
             <TabsContent value="popular" className="flex-1 mt-4 overflow-hidden">
               <ScrollArea className="h-[400px] pr-4">
@@ -341,9 +421,10 @@ export function GoalTemplateDialog({ open, onOpenChange, onSelectTemplate }: Goa
 interface TemplateCardProps {
   template: GoalTemplate
   onClick: () => void
+  isRecommended?: boolean
 }
 
-function TemplateCard({ template, onClick }: TemplateCardProps) {
+function TemplateCard({ template, onClick, isRecommended = false }: TemplateCardProps) {
   const typeColors: Record<GoalType, string> = {
     RETIREMENT: 'bg-purple-500/10 text-purple-700 border-purple-500/20',
     HOUSE: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
@@ -353,7 +434,9 @@ function TemplateCard({ template, onClick }: TemplateCardProps) {
 
   return (
     <Card 
-      className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] border-2"
+      className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] border-2 ${
+        isRecommended ? 'border-accent/50 shadow-md' : ''
+      }`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">
@@ -361,8 +444,13 @@ function TemplateCard({ template, onClick }: TemplateCardProps) {
           <div className="flex items-center gap-3 flex-1">
             <span className="text-4xl">{template.icon}</span>
             <div className="flex-1">
-              <CardTitle className="text-lg">{template.name}</CardTitle>
-              <Badge variant="outline" className={`mt-1 text-xs ${typeColors[template.type]}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <CardTitle className="text-lg">{template.name}</CardTitle>
+                {isRecommended && (
+                  <Sparkle size={16} weight="fill" className="text-accent" />
+                )}
+              </div>
+              <Badge variant="outline" className={`text-xs ${typeColors[template.type]}`}>
                 {template.type}
               </Badge>
             </div>
