@@ -13,12 +13,15 @@ import {
   Warning,
   TrendUp,
   Wallet,
+  Lightbulb,
+  ArrowRight,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
 import { AIAssistant } from './AIAssistant'
+import { InsightsDashboard } from './InsightsDashboard'
 
 interface ClientProfileProps {
   clientId: string
@@ -117,10 +120,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-5 w-full">
               <TabsTrigger value="overview" className="gap-2">
                 <UserIcon size={16} />
                 <span className="hidden sm:inline">Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="insights" className="gap-2">
+                <Target size={16} />
+                <span className="hidden sm:inline">Insights</span>
               </TabsTrigger>
               <TabsTrigger value="portfolio" className="gap-2">
                 <ChartLine size={16} />
@@ -210,6 +217,35 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                   )}
                 </CardContent>
               </Card>
+
+              <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 via-primary/5 to-transparent">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb size={24} weight="duotone" className="text-accent" />
+                    Financial Insights
+                  </CardTitle>
+                  <CardDescription>
+                    Get AI-powered personalized recommendations
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    View comprehensive analysis of your complete financial picture with smart, actionable recommendations tailored to your goals.
+                  </p>
+                  <Button 
+                    variant="default" 
+                    className="w-full gap-2"
+                    onClick={() => setActiveTab('insights')}
+                  >
+                    View Insights Dashboard
+                    <ArrowRight size={16} weight="bold" />
+                  </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="insights" className="mt-6">
+              <InsightsDashboard clientId={clientId} />
             </TabsContent>
 
             <TabsContent value="portfolio" className="mt-6">

@@ -26,6 +26,13 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Progression**: View wealth snapshot → Review performance → Check goal progress → See personalized recommendations → Ask AI assistant questions
 - **Success criteria**: Real-time calculated metrics, clear visual hierarchy, actionable next steps prominently displayed
 
+### Personalized Financial Insights Dashboard
+- **Functionality**: Comprehensive AI-powered analysis of complete financial picture with health scoring, actionable recommendations, and detailed insights
+- **Purpose**: Provide holistic view of financial health with prioritized actions and personalized guidance
+- **Trigger**: Navigate to "Insights" tab or click "View Insights Dashboard" from overview
+- **Progression**: View portfolio health score → Review goals status breakdown → See priority actions ranked by importance → Generate AI insights → Read comprehensive analysis → Take recommended actions
+- **Success criteria**: Health score accurately reflects portfolio alignment with goals and risk profile, AI insights are specific to user's actual data, recommendations are prioritized and actionable, all metrics clearly explained
+
 ### AI Financial Assistant
 - **Functionality**: Natural language Q&A about personal finances, portfolio, goals, and investment strategies
 - **Purpose**: Demystify financial decisions and provide personalized guidance in plain language
@@ -145,6 +152,7 @@ Animations should communicate **progress, growth, and positive momentum** while 
 
 **Components**:
 - **Dashboard Wealth Cards**: Large, friendly cards with Outfit numbers, Plus Jakarta Sans labels, soft shadows, growth animations on value updates
+- **Insights Dashboard**: Comprehensive view with health score ring, goals status breakdown, priority actions list, AI-generated insights card with prominent CTA
 - **Portfolio Holdings**: Shadcn Table with clear hierarchy, color-coded gains/losses, tap to expand for details on mobile
 - **Allocation Visualization**: Recharts DonutChart with interactive segments, smooth transitions, clear labels without jargon
 - **AI Financial Assistant**: Prominent chat-style interface with user bubbles (right) and AI bubbles (left, cyan accent), typing indicators, expandable source citations
