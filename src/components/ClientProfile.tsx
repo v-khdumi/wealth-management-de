@@ -24,7 +24,10 @@ import { OrdersView } from './OrdersView'
 import { AIAssistant } from './AIAssistant'
 import { InsightsDashboard } from './InsightsDashboard'
 import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
+import { GoalTemplateDialog } from './GoalTemplateDialog'
 import type { Goal } from '@/lib/types'
+import type { GoalTemplate } from '@/lib/goal-templates'
+import { toast } from 'sonner'
 
 interface ClientProfileProps {
   clientId: string
@@ -42,6 +45,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
+  const [showTemplateDialog, setShowTemplateDialog] = useState(false)
 
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
@@ -67,6 +71,32 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           : g
       )
     )
+  }
+
+  const handleCreateGoalFromTemplate = (template: GoalTemplate, customAmount: number, customYears: number) => {
+    const targetDate = new Date()
+    targetDate.setFullYear(targetDate.getFullYear() + customYears)
+    
+    const monthlyContribution = Math.ceil(customAmount / (customYears * 12))
+    
+    const newGoal: Goal = {
+      id: `goal-${Date.now()}`,
+      clientId: clientId,
+      type: template.type,
+      name: template.name,
+      targetAmount: customAmount,
+      currentAmount: 0,
+      targetDate: targetDate.toISOString(),
+      monthlyContribution: monthlyContribution,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    
+    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
+    
+    toast.success('Goal Created!', {
+      description: `${template.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
+    })
   }
 
   return (
@@ -270,13 +300,21 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             <TabsContent value="goals" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target size={24} />
-                    My Financial Goals
-                  </CardTitle>
-                  <CardDescription>
-                    Track your progress toward life's important milestones
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Target size={24} />
+                        My Financial Goals
+                      </CardTitle>
+                      <CardDescription>
+                        Track your progress toward life's important milestones
+                      </CardDescription>
+                    </div>
+                    <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
+                      <Target size={16} weight="bold" />
+                      Add Goal
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {clientGoals.length === 0 ? (
@@ -286,7 +324,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                       <p className="text-sm text-muted-foreground mb-4">
                         Start planning for retirement, a home, education, or other dreams
                       </p>
-                      <Button>Add Your First Goal</Button>
+                      <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
+                        <Target size={16} weight="bold" />
+                        Add Your First Goal
+                      </Button>
                     </div>
                   ) : (
                     clientGoals.map(goal => {
@@ -393,6 +434,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           onSave={handleUpdateGoalContribution}
         />
       )}
+
+      <GoalTemplateDialog
+        open={showTemplateDialog}
+        onOpenChange={setShowTemplateDialog}
+        onSelectTemplate={handleCreateGoalFromTemplate}
+      />
     </div>
   )
 }

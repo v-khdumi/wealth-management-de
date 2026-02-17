@@ -79,8 +79,15 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Functionality**: Create and track life goals (retirement, home purchase, education) with progress visualization and savings recommendations
 - **Purpose**: Connect daily investment decisions to meaningful life objectives
 - **Trigger**: Navigate to "My Goals" section or click "Add Goal" from dashboard
-- **Progression**: Define goal (type, amount, timeline) → AI calculates required savings → View progress visualization → Get personalized tips → Adjust contributions → See updated projections
-- **Success criteria**: Math accurately projects required monthly savings, progress bars motivate action, AI explains trade-offs and options in accessible language
+- **Progression**: Click Add Goal → Browse goal templates by category → Select template → Customize amount and timeline → View helpful tips → Review calculated monthly contribution → Create goal → View progress visualization → Get personalized tips → Adjust contributions → See updated projections
+- **Success criteria**: Math accurately projects required monthly savings, progress bars motivate action, AI explains trade-offs and options in accessible language, templates make goal creation quick and intuitive
+
+### Goal Templates for Common Milestones
+- **Functionality**: Pre-configured templates for popular financial goals with suggested amounts, timelines, and helpful tips
+- **Purpose**: Make goal creation faster and help users set realistic targets based on common benchmarks
+- **Trigger**: Click "Add Goal" button from Goals tab
+- **Progression**: View goal template library → Filter by category (Popular, Retirement, Home, Education, Other) → Search for specific goals → Select template → Review suggested amount and timeline → Adjust sliders to customize → Read helpful tips → See calculated monthly contribution → Create goal
+- **Success criteria**: Templates cover major life milestones, amounts reflect realistic benchmarks, tips provide actionable guidance, customization allows personalization while maintaining realistic ranges
 
 ### Activity History & Transparency
 - **Functionality**: Complete log of all transactions, AI interactions, and portfolio changes
