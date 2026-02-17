@@ -16,9 +16,10 @@ import {
   Lightbulb,
   ArrowRight,
   PencilSimple,
+  Eye,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
-import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution } from '@/lib/business-logic'
+import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
 import { AIAssistant } from './AIAssistant'
@@ -27,6 +28,7 @@ import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
 import { GoalTemplateDialog } from './GoalTemplateDialog'
 import { CustomGoalDialog } from './CustomGoalDialog'
 import { MilestoneCelebration } from './MilestoneCelebration'
+import { GoalDetailView } from './GoalDetailView'
 import type { Goal, GoalMilestone, GoalType } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
@@ -47,6 +49,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
+  const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showCustomGoalDialog, setShowCustomGoalDialog] = useState(false)
   const [celebrationData, setCelebrationData] = useState<{
@@ -80,11 +83,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             g.currentAmount + g.monthlyContribution * 3,
             g.targetAmount
           )
-          const updated = { 
+          let updated = { 
             ...g, 
             currentAmount: newAmount,
             updatedAt: new Date().toISOString() 
           }
+          updated = addProgressSnapshotToGoal(updated)
           checkMilestones(updated)
           return updated
         }
@@ -102,9 +106,22 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     setGoals((currentGoals) => {
       const updatedGoals = (currentGoals || []).map((g) => {
         if (g.id === goalId) {
-          const updated = { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          let updated = { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          updated = addProgressSnapshotToGoal(updated)
           checkMilestones(updated)
           return updated
+        }
+        return g
+      })
+      return updatedGoals
+    })
+  }
+
+  const handleUpdateGoal = (goalId: string, updates: Partial<Goal>) => {
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          return { ...g, ...updates, updatedAt: new Date().toISOString() }
         }
         return g
       })
@@ -476,13 +493,16 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <p className="text-sm text-muted-foreground">Target</p>
-                                <p className="font-bold wealth-number text-2xl text-primary">
-                                  ${goal.targetAmount.toLocaleString()}
-                                </p>
-                              </div>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedGoalForDetail(goal)}
+                                className="gap-2"
+                              >
+                                <Eye size={16} />
+                                <span className="hidden sm:inline">View Details</span>
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -606,6 +626,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           targetAmount={celebrationData.targetAmount}
         />
       )}
+
+      <GoalDetailView
+        goal={selectedGoalForDetail}
+        allGoals={clientGoals}
+        isOpen={!!selectedGoalForDetail}
+        onClose={() => setSelectedGoalForDetail(null)}
+        onUpdateGoal={handleUpdateGoal}
+      />
     </div>
   )
 }

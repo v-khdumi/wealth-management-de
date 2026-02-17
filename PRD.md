@@ -110,6 +110,27 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Progression**: Progress updates → System detects milestone crossed → Celebration animation appears with confetti → Shows achievement message → Displays current vs target amounts → Encourages continued progress → Milestone badge added to goal card
 - **Success criteria**: Animations feel delightful not intrusive, messages are encouraging and personalized, milestones are tracked and prevent duplicate celebrations, goal cards show milestone badges, confetti uses theme colors and feels celebratory
 
+### Goal Analytics & Historical Trends
+- **Functionality**: Visualize goal progress over time with historical snapshots, trend analysis, and future projections
+- **Purpose**: Help users understand their savings patterns and see if they're on track to meet deadlines
+- **Trigger**: Click "View Details" on any goal → Navigate to Analytics tab
+- **Progression**: View historical progress chart showing saved amounts over time → See trend analysis (accelerating/steady) → Review average monthly growth statistics → View projection chart showing predicted future progress → Read AI-generated insights about pace and recommendations
+- **Success criteria**: Charts are clear and easy to understand, trend calculations are accurate, projections use realistic averages, insights provide actionable guidance, users can see if they're ahead or behind schedule
+
+### Goal Sharing with Family Feedback
+- **Functionality**: Share financial goals with family members and receive supportive feedback
+- **Purpose**: Build accountability and support system for achieving financial milestones
+- **Trigger**: Click "View Details" on goal → Navigate to Sharing tab → Click "Share with Family Member"
+- **Progression**: Enter family member name and email → Send invitation → Family member views goal progress → Family member provides feedback (supportive, concerned, or neutral) → User receives notification → User reads feedback → Can respond or adjust goal based on input
+- **Success criteria**: Sharing process is simple, feedback includes sentiment indicators (heart for supportive, warning for concerned), unread feedback is clearly marked, users can simulate feedback in demo mode, family members shown with avatars and contact info
+
+### Goal Dependencies & Relationship Tracking
+- **Functionality**: Link related goals together to show dependencies and relationships between financial milestones
+- **Purpose**: Help users understand how goals interconnect and prioritize accordingly
+- **Trigger**: Click "View Details" on goal → Navigate to Dependencies tab → Click "Add Dependency"
+- **Progression**: Select related goal → Choose relationship type (Blocks, Enables, Related) → Add description → View dependency graph → See warnings for blocked goals → Get notifications when prerequisite goals are completed → Adjust priorities based on dependencies
+- **Success criteria**: Three relationship types clearly explained, visual indicators show blocking vs enabling relationships, system warns when pursuing goal that's blocked by incomplete prerequisite, completion of enabling goals triggers positive notifications, dependency count visible on goal cards
+
 ### Activity History & Transparency
 - **Functionality**: Complete log of all transactions, AI interactions, and portfolio changes
 - **Purpose**: Build trust through total transparency and help clients understand past decisions

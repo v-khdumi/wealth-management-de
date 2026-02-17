@@ -7,6 +7,7 @@ import type {
   Goal,
   NextBestAction,
   AssetClass,
+  GoalProgressSnapshot,
 } from './types'
 
 export interface AllocationBreakdown {
@@ -236,5 +237,51 @@ export function checkConcentration(
     acceptable: percentage <= 40,
     resultingPercentage: percentage,
     limit: 40,
+  }
+}
+
+export function captureGoalProgressSnapshot(goal: Goal): GoalProgressSnapshot {
+  const monthsRemaining = Math.max(0, Math.ceil(
+    (new Date(goal.targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44)
+  ))
+  
+  const remainingAmount = goal.targetAmount - goal.currentAmount
+  const projectedMonthlyNeeded = monthsRemaining > 0 ? remainingAmount / monthsRemaining : 0
+  
+  let projectedCompletion = goal.targetDate
+  if (goal.monthlyContribution > 0 && remainingAmount > 0) {
+    const monthsToCompletion = Math.ceil(remainingAmount / goal.monthlyContribution)
+    const completionDate = new Date()
+    completionDate.setMonth(completionDate.getMonth() + monthsToCompletion)
+    projectedCompletion = completionDate.toISOString()
+  }
+
+  return {
+    id: `snapshot_${Date.now()}`,
+    goalId: goal.id,
+    timestamp: new Date().toISOString(),
+    currentAmount: goal.currentAmount,
+    targetAmount: goal.targetAmount,
+    monthlyContribution: goal.monthlyContribution,
+    projectedCompletion,
+  }
+}
+
+export function addProgressSnapshotToGoal(goal: Goal): Goal {
+  const snapshot = captureGoalProgressSnapshot(goal)
+  const existingSnapshots = goal.progressHistory || []
+  
+  const lastSnapshot = existingSnapshots[existingSnapshots.length - 1]
+  const shouldAddSnapshot = !lastSnapshot || 
+    Math.abs(lastSnapshot.currentAmount - snapshot.currentAmount) > 100 ||
+    Math.abs(lastSnapshot.monthlyContribution - snapshot.monthlyContribution) > 10
+  
+  if (!shouldAddSnapshot) {
+    return goal
+  }
+  
+  return {
+    ...goal,
+    progressHistory: [...existingSnapshots, snapshot],
   }
 }

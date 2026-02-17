@@ -308,6 +308,12 @@ export const SEED_GOALS: Goal[] = [
     monthlyContribution: 5000,
     createdAt: '2020-01-15T10:00:00Z',
     updatedAt: '2024-12-01T10:00:00Z',
+    progressHistory: [
+      { id: 'snap-1-1', goalId: 'goal-1', timestamp: '2024-06-01T00:00:00Z', currentAmount: 780000, targetAmount: 3000000, monthlyContribution: 5000, projectedCompletion: '2034-03-15' },
+      { id: 'snap-1-2', goalId: 'goal-1', timestamp: '2024-08-01T00:00:00Z', currentAmount: 800000, targetAmount: 3000000, monthlyContribution: 5000, projectedCompletion: '2034-02-10' },
+      { id: 'snap-1-3', goalId: 'goal-1', timestamp: '2024-10-01T00:00:00Z', currentAmount: 825000, targetAmount: 3000000, monthlyContribution: 5000, projectedCompletion: '2034-01-20' },
+      { id: 'snap-1-4', goalId: 'goal-1', timestamp: '2024-12-01T00:00:00Z', currentAmount: 850000, targetAmount: 3000000, monthlyContribution: 5000, projectedCompletion: '2034-01-01' },
+    ],
   },
   {
     id: 'goal-2',
@@ -320,6 +326,12 @@ export const SEED_GOALS: Goal[] = [
     monthlyContribution: 1500,
     createdAt: '2020-06-10T10:00:00Z',
     updatedAt: '2024-12-01T10:00:00Z',
+    progressHistory: [
+      { id: 'snap-2-1', goalId: 'goal-2', timestamp: '2024-06-01T00:00:00Z', currentAmount: 108000, targetAmount: 200000, monthlyContribution: 1500, projectedCompletion: '2030-09-01' },
+      { id: 'snap-2-2', goalId: 'goal-2', timestamp: '2024-08-01T00:00:00Z', currentAmount: 112000, targetAmount: 200000, monthlyContribution: 1500, projectedCompletion: '2030-08-15' },
+      { id: 'snap-2-3', goalId: 'goal-2', timestamp: '2024-10-01T00:00:00Z', currentAmount: 116000, targetAmount: 200000, monthlyContribution: 1500, projectedCompletion: '2030-08-01' },
+      { id: 'snap-2-4', goalId: 'goal-2', timestamp: '2024-12-01T00:00:00Z', currentAmount: 120000, targetAmount: 200000, monthlyContribution: 1500, projectedCompletion: '2030-07-15' },
+    ],
   },
   {
     id: 'goal-3',
@@ -332,6 +344,12 @@ export const SEED_GOALS: Goal[] = [
     monthlyContribution: 3000,
     createdAt: '2021-03-20T10:00:00Z',
     updatedAt: '2024-12-01T10:00:00Z',
+    progressHistory: [
+      { id: 'snap-3-1', goalId: 'goal-3', timestamp: '2024-06-01T00:00:00Z', currentAmount: 30000, targetAmount: 150000, monthlyContribution: 2500, projectedCompletion: '2027-08-01' },
+      { id: 'snap-3-2', goalId: 'goal-3', timestamp: '2024-08-01T00:00:00Z', currentAmount: 35000, targetAmount: 150000, monthlyContribution: 2500, projectedCompletion: '2027-07-15' },
+      { id: 'snap-3-3', goalId: 'goal-3', timestamp: '2024-10-01T00:00:00Z', currentAmount: 40000, targetAmount: 150000, monthlyContribution: 3000, projectedCompletion: '2027-06-20' },
+      { id: 'snap-3-4', goalId: 'goal-3', timestamp: '2024-12-01T00:00:00Z', currentAmount: 45000, targetAmount: 150000, monthlyContribution: 3000, projectedCompletion: '2027-06-01' },
+    ],
   },
   {
     id: 'goal-4',
@@ -344,5 +362,11 @@ export const SEED_GOALS: Goal[] = [
     monthlyContribution: 8000,
     createdAt: '2019-06-10T10:00:00Z',
     updatedAt: '2024-12-01T10:00:00Z',
+    progressHistory: [
+      { id: 'snap-4-1', goalId: 'goal-4', timestamp: '2024-06-01T00:00:00Z', currentAmount: 402000, targetAmount: 2500000, monthlyContribution: 8000, projectedCompletion: '2029-01-15' },
+      { id: 'snap-4-2', goalId: 'goal-4', timestamp: '2024-08-01T00:00:00Z', currentAmount: 418000, targetAmount: 2500000, monthlyContribution: 8000, projectedCompletion: '2028-12-20' },
+      { id: 'snap-4-3', goalId: 'goal-4', timestamp: '2024-10-01T00:00:00Z', currentAmount: 434000, targetAmount: 2500000, monthlyContribution: 8000, projectedCompletion: '2028-12-10' },
+      { id: 'snap-4-4', goalId: 'goal-4', timestamp: '2024-12-01T00:00:00Z', currentAmount: 450000, targetAmount: 2500000, monthlyContribution: 8000, projectedCompletion: '2028-11-30' },
+    ],
   },
 ]

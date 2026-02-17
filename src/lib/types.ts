@@ -65,6 +65,35 @@ export interface GoalMilestone {
   celebrated: boolean
 }
 
+export interface GoalProgressSnapshot {
+  id: string
+  goalId: string
+  timestamp: string
+  currentAmount: number
+  targetAmount: number
+  monthlyContribution: number
+  projectedCompletion: string
+}
+
+export interface GoalFeedback {
+  id: string
+  goalId: string
+  sharedWithEmail: string
+  sharedWithName: string
+  message?: string
+  sentiment: 'SUPPORTIVE' | 'CONCERNED' | 'NEUTRAL'
+  createdAt: string
+  readAt?: string
+}
+
+export interface GoalDependency {
+  id: string
+  goalId: string
+  dependsOnGoalId: string
+  relationshipType: 'BLOCKS' | 'ENABLES' | 'RELATED'
+  description: string
+}
+
 export interface Goal {
   id: string
   clientId: string
@@ -78,6 +107,9 @@ export interface Goal {
   updatedAt: string
   milestones?: GoalMilestone[]
   isCustom?: boolean
+  progressHistory?: GoalProgressSnapshot[]
+  sharedWith?: GoalFeedback[]
+  dependencies?: GoalDependency[]
 }
 
 export interface Portfolio {
