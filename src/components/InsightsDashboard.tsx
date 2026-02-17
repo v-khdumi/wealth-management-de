@@ -16,6 +16,8 @@ import {
   ChartLine,
   ArrowRight,
   CaretRight,
+  PencilSimple,
+  CurrencyDollar,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
@@ -29,7 +31,8 @@ import {
   calculateRequiredMonthlyContribution,
 } from '@/lib/business-logic'
 import { generatePersonalizedInsights } from '@/lib/insights-engine'
-import type { NextBestAction } from '@/lib/types'
+import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
+import type { NextBestAction, Goal } from '@/lib/types'
 import { toast } from 'sonner'
 
 interface InsightsDashboardProps {
@@ -49,10 +52,12 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     modelPortfolios,
     aiInteractions,
     setAiInteractions,
+    setGoals,
   } = useDataStore()
 
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<string | null>(null)
+  const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
 
   const client = useMemo(() => users?.find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => clientProfiles?.find(cp => cp.userId === clientId), [clientProfiles, clientId])
@@ -176,6 +181,16 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     } finally {
       setIsGenerating(false)
     }
+  }
+
+  const handleUpdateGoalContribution = (goalId: string, newContribution: number) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map((g) =>
+        g.id === goalId
+          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          : g
+      )
+    )
   }
 
   if (!client || !profile || !riskProfile || !portfolio || !portfolioHealth) {
@@ -326,6 +341,135 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
+              <Target size={24} className="text-success" />
+              Goal Contribution Manager
+            </CardTitle>
+            <CardDescription>
+              Review and adjust your monthly savings to stay on track
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[500px] pr-4">
+              <div className="space-y-3">
+                {clientGoals.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Target size={48} weight="duotone" className="mx-auto mb-4 text-muted-foreground/30" />
+                    <p className="font-semibold text-muted-foreground mb-2">No goals set yet</p>
+                    <p className="text-sm text-muted-foreground">
+                      Create financial goals to get personalized contribution recommendations
+                    </p>
+                  </div>
+                ) : (
+                  clientGoals.map((goal) => {
+                    const gap = calculateGoalGap(goal)
+                    const required = calculateRequiredMonthlyContribution(goal)
+                    const shortfall = required - goal.monthlyContribution
+                    const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+
+                    return (
+                      <div
+                        key={goal.id}
+                        className="p-4 border-2 rounded-lg hover:border-primary/30 transition-all hover:shadow-md space-y-3"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-bold text-lg mb-1">{goal.name}</p>
+                            <Badge variant="secondary" className="text-xs">{goal.type}</Badge>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedGoalForAdjustment(goal)}
+                            className="gap-2"
+                          >
+                            <PencilSimple size={16} />
+                            Adjust
+                          </Button>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between text-xs mb-1.5">
+                            <span className="text-muted-foreground">Progress</span>
+                            <span className="font-semibold">{progress.toFixed(1)}%</span>
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="bg-muted/30 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">Current Monthly</p>
+                            <p className="font-bold text-base wealth-number">
+                              ${goal.monthlyContribution.toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="bg-muted/30 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">Recommended</p>
+                            <p className="font-bold text-base wealth-number">
+                              ${Math.ceil(required).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        {shortfall > 100 && (
+                          <div className={`p-3 rounded-lg border-2 ${
+                            shortfall > 500 
+                              ? 'bg-destructive/5 border-destructive/30' 
+                              : 'bg-warning/5 border-warning/30'
+                          }`}>
+                            <div className="flex items-start gap-2">
+                              <Warning 
+                                size={16} 
+                                weight="fill" 
+                                className={shortfall > 500 ? 'text-destructive mt-0.5' : 'text-warning mt-0.5'} 
+                              />
+                              <div className="flex-1">
+                                <p className={`text-xs font-semibold ${
+                                  shortfall > 500 ? 'text-destructive' : 'text-warning'
+                                }`}>
+                                  {shortfall > 500 ? 'Critical Gap' : 'Recommendation'}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Increase by ${Math.ceil(shortfall).toLocaleString()}/month to reach goal
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {shortfall <= 100 && shortfall > 0 && (
+                          <div className="p-3 rounded-lg border-2 bg-success/5 border-success/30">
+                            <div className="flex items-start gap-2">
+                              <CheckCircle size={16} weight="fill" className="text-success mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-xs font-semibold text-success">Almost There!</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Just ${Math.ceil(shortfall).toLocaleString()}/month more to be perfectly on track
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {shortfall <= 0 && (
+                          <div className="p-3 rounded-lg border-2 bg-success/5 border-success/30">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle size={16} weight="fill" className="text-success" />
+                              <p className="text-xs font-semibold text-success">On Track!</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
               <ChartLine size={24} className="text-primary" />
               Portfolio Insights
             </CardTitle>
@@ -411,7 +555,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Target size={24} className="text-success" />
+              <Lightbulb size={24} className="text-warning" />
               Next Best Actions
             </CardTitle>
             <CardDescription>
@@ -419,7 +563,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[500px] pr-4">
               <div className="space-y-3">
                 {nextBestActions.length === 0 ? (
                   <div className="text-center py-12">
@@ -461,6 +605,15 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {selectedGoalForAdjustment && (
+        <GoalAdjustmentDialog
+          goal={selectedGoalForAdjustment}
+          open={!!selectedGoalForAdjustment}
+          onOpenChange={(open) => !open && setSelectedGoalForAdjustment(null)}
+          onSave={handleUpdateGoalContribution}
+        />
+      )}
     </div>
   )
 }

@@ -15,6 +15,7 @@ import {
   Wallet,
   Lightbulb,
   ArrowRight,
+  PencilSimple,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution } from '@/lib/business-logic'
@@ -22,6 +23,8 @@ import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
 import { AIAssistant } from './AIAssistant'
 import { InsightsDashboard } from './InsightsDashboard'
+import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
+import type { Goal } from '@/lib/types'
 
 interface ClientProfileProps {
   clientId: string
@@ -34,9 +37,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     riskProfiles,
     goals,
     portfolios,
+    setGoals,
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
+  const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
 
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
@@ -53,6 +58,16 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const totalGoalsProgress = clientGoals.length > 0
     ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
     : 0
+
+  const handleUpdateGoalContribution = (goalId: string, newContribution: number) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map((g) =>
+        g.id === goalId
+          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          : g
+      )
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -286,11 +301,22 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               <p className="font-bold text-xl mb-1">{goal.name}</p>
                               <Badge variant="secondary">{goal.type}</Badge>
                             </div>
-                            <div className="text-right">
-                              <p className="text-sm text-muted-foreground">Target</p>
-                              <p className="font-bold wealth-number text-2xl text-primary">
-                                ${goal.targetAmount.toLocaleString()}
-                              </p>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <p className="text-sm text-muted-foreground">Target</p>
+                                <p className="font-bold wealth-number text-2xl text-primary">
+                                  ${goal.targetAmount.toLocaleString()}
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedGoalForAdjustment(goal)}
+                                className="gap-2"
+                              >
+                                <PencilSimple size={16} />
+                                <span className="hidden sm:inline">Adjust</span>
+                              </Button>
                             </div>
                           </div>
                           
@@ -322,11 +348,22 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                           </div>
 
                           {required > goal.monthlyContribution + 100 && (
-                            <div className="bg-warning/10 border-2 border-warning/30 rounded-lg p-4">
-                              <p className="font-semibold text-warning mb-1">💡 Recommendation</p>
-                              <p className="text-sm">
-                                Consider increasing your monthly contribution by <strong>${Math.floor(required - goal.monthlyContribution).toLocaleString()}</strong> to stay on track for your target date.
-                              </p>
+                            <div className="bg-warning/10 border-2 border-warning/30 rounded-lg p-4 space-y-3">
+                              <div>
+                                <p className="font-semibold text-warning mb-1">💡 Recommendation</p>
+                                <p className="text-sm">
+                                  Consider increasing your monthly contribution by <strong>${Math.floor(required - goal.monthlyContribution).toLocaleString()}</strong> to stay on track for your target date.
+                                </p>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedGoalForAdjustment(goal)}
+                                className="w-full gap-2"
+                              >
+                                <PencilSimple size={16} />
+                                Adjust Contribution
+                              </Button>
                             </div>
                           )}
                         </div>
@@ -347,6 +384,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           <AIAssistant clientId={clientId} />
         </div>
       </div>
+
+      {selectedGoalForAdjustment && (
+        <GoalAdjustmentDialog
+          goal={selectedGoalForAdjustment}
+          open={!!selectedGoalForAdjustment}
+          onOpenChange={(open) => !open && setSelectedGoalForAdjustment(null)}
+          onSave={handleUpdateGoalContribution}
+        />
+      )}
     </div>
   )
 }
