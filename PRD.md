@@ -1,195 +1,196 @@
-# Wealth Management Demo + GenAI Copilot
+# Personal Wealth Dashboard + AI Financial Assistant
 
-A bank-grade demonstration platform showcasing modern wealth management capabilities enhanced with responsible GenAI assistance for advisors and clients.
+A client-focused wealth management platform that puts individuals in control of their financial future with AI-powered insights and guidance.
 
 **Experience Qualities**:
-1. **Professional** - Evoke trust and competence through refined typography, structured layouts, and precise data presentation that mirrors enterprise financial platforms
-2. **Transparent** - Make AI reasoning visible and auditable, clearly distinguish demo content from production features, and present complex financial data with clarity
-3. **Empowering** - Help advisors serve clients better and help clients understand their wealth through contextual AI explanations grounded in their actual data
+1. **Empowering** - Give clients direct control and understanding of their wealth through clear visualizations, plain-language explanations, and actionable insights
+2. **Approachable** - Make complex financial concepts accessible through conversational AI, intuitive design, and educational content tailored to individual goals
+3. **Trustworthy** - Build confidence through transparent data, grounded AI explanations, and clear disclosure of information sources and limitations
 
 **Complexity Level**: Complex Application (advanced functionality, likely with multiple views)
-This platform manages role-based access, real-time portfolio calculations, multi-step order workflows, audit logging, and AI-powered contextual assistance across advisor and client experiences. It requires sophisticated state management, data modeling, and careful AI prompt engineering with fact grounding.
+This platform manages personalized portfolio tracking, goal planning, intelligent rebalancing suggestions, AI-powered financial guidance, and transaction management. It requires sophisticated state management, real-time calculations, and careful AI prompt engineering with fact grounding focused on individual client needs.
 
 ## Essential Features
 
-### Authentication & Role Selection
-- **Functionality**: Select role (Advisor/Client) and user identity from seeded personas
-- **Purpose**: Demonstrate RBAC without production OAuth complexity, enable quick role-switching for demos
-- **Trigger**: Landing page presents role cards and user dropdown
-- **Progression**: Select role → Choose user → Enter dashboard (redirects based on role)
-- **Success criteria**: Advisors access all clients, clients see only their own data, no unauthorized access possible
+### Simple Account Selection
+- **Functionality**: Select from demo client personas to explore different financial situations
+- **Purpose**: Allow users to see how the platform works for different wealth levels and life stages
+- **Trigger**: Landing page presents client cards with brief descriptions
+- **Progression**: View persona cards → Select a persona → Enter personalized dashboard
+- **Success criteria**: Each persona shows appropriate portfolio size, goals, and financial situation
 
-### Advisor Dashboard & KPIs
-- **Functionality**: Display AUM, client count, active alerts, pending orders; searchable/filterable client list
-- **Purpose**: Give advisors portfolio-level view of their book and quick access to clients needing attention
-- **Trigger**: Advisor login or navigation to /advisor/dashboard
-- **Progression**: View KPIs → Review next best actions → Search/filter clients → Click client to drill down
-- **Success criteria**: Real-time calculated metrics, accurate client filtering, visible action items
+### Personal Dashboard & Financial Overview
+- **Functionality**: Display total wealth, portfolio performance, asset allocation, and personalized insights
+- **Purpose**: Give clients immediate understanding of their financial health and progress toward goals
+- **Trigger**: Login or navigation to home dashboard
+- **Progression**: View wealth snapshot → Review performance → Check goal progress → See personalized recommendations → Ask AI assistant questions
+- **Success criteria**: Real-time calculated metrics, clear visual hierarchy, actionable next steps prominently displayed
 
-### Advisor Copilot (GenAI)
-- **Functionality**: Natural language Q&A about clients or advisor's book, grounded in seeded data
-- **Purpose**: Accelerate advisor research and client preparation with AI-synthesized insights
-- **Trigger**: Type question in copilot panel (always-visible on advisor pages)
-- **Progression**: Enter question → AI retrieves relevant facts → Generates grounded response → Shows sources used → Logs interaction to audit trail
-- **Success criteria**: Responses cite only factual data, include disclaimers, log to audit trail, work offline with mock responses
+### AI Financial Assistant
+- **Functionality**: Natural language Q&A about personal finances, portfolio, goals, and investment strategies
+- **Purpose**: Demystify financial decisions and provide personalized guidance in plain language
+- **Trigger**: Type question in always-visible assistant panel or click quick-ask prompts
+- **Progression**: Ask question → AI retrieves personal financial facts → Generates personalized response → Shows data sources → Explains reasoning → Offers follow-up actions
+- **Success criteria**: Responses use client's actual data, avoid jargon, include educational context, clearly state when information is unavailable
 
-### Client Profile View
-- **Functionality**: Display demographics, risk profile (score 1-10, category, age), goals with progress tracking
-- **Purpose**: Give advisors comprehensive client context for personalized advice
-- **Trigger**: Select client from advisor dashboard or client views own profile
-- **Progression**: View profile → Check risk profile freshness → Review goal progress → Identify gaps → Take action (update risk, add goal, create order)
-- **Success criteria**: Risk profile shows staleness warnings (>180 days), goal gaps calculate correctly, "Explain this client" AI button generates professional briefing
+### Personal Profile & Risk Assessment
+- **Functionality**: View and update personal information, risk tolerance, investment preferences, and financial goals
+- **Purpose**: Keep financial plan aligned with life changes and evolving priorities
+- **Trigger**: Navigate to profile section or prompted by AI assistant when profile is outdated
+- **Progression**: View current profile → Update risk tolerance questionnaire → Review recommended changes → Confirm updates → See how changes affect portfolio recommendations
+- **Success criteria**: Risk assessment drives portfolio recommendations, stale profiles (>180 days) trigger friendly reminders, AI explains implications of risk changes
 
-### Portfolio View & Analysis
-- **Functionality**: Holdings table, asset allocation chart, drift vs recommended model, performance metrics
-- **Purpose**: Visualize portfolio composition and identify rebalancing needs
-- **Trigger**: Navigate to portfolio tab
-- **Progression**: View holdings → See allocation chart → Compare to model → Identify drift → Review AI explanation → Create rebalancing order
-- **Success criteria**: Drift % calculated correctly, model recommendation follows rules, AI explanation references actual holdings and percentages
+### My Portfolio & Investments
+- **Functionality**: Visual breakdown of all holdings, asset allocation, performance over time, and investment recommendations
+- **Purpose**: Help clients understand what they own, how it's performing, and if it aligns with their goals
+- **Trigger**: Navigate to "My Portfolio" section
+- **Progression**: View holdings overview → Explore allocation charts → Check performance → Review AI-powered insights → See rebalancing suggestions → Ask AI questions about specific investments
+- **Success criteria**: Clear visualizations, performance shown in context, AI explains portfolio composition in plain language, recommendations feel personalized
 
-### Model Portfolio Recommendations
-- **Functionality**: Rule-based assignment of target model based on risk score, with allocation targets
-- **Purpose**: Provide personalized asset allocation guidance aligned with risk tolerance
-- **Trigger**: Automatic on portfolio load based on client risk score
-- **Progression**: Risk score determines model → Model defines target allocations → Drift calculated → Recommendation shown if drift > threshold
-- **Success criteria**: Conservative (1-3), Balanced (4-5), Growth (6-7), Aggressive (8-10) mapping works, allocations sum to 100%
+### Personalized Investment Recommendations
+- **Functionality**: AI-powered suggestions for portfolio adjustments based on goals, risk tolerance, and market conditions
+- **Purpose**: Provide actionable guidance for optimizing wealth without requiring financial expertise
+- **Trigger**: Automatic analysis when viewing portfolio, or ask AI assistant directly
+- **Progression**: Portfolio analyzed against goals and risk profile → Gaps identified → Recommendations generated → AI explains why changes make sense → Client can explore or implement suggestions
+- **Success criteria**: Recommendations clearly tied to specific goals, explanations use client's actual numbers, options presented with pros/cons
 
-### Paper Trading & Order Management
-- **Functionality**: Create buy/sell orders, validate suitability/cash/exposure, simulate execution after delay
-- **Purpose**: Demonstrate trade workflow with compliance checks and realistic lifecycle
-- **Trigger**: Click "New Order" button on portfolio page
-- **Progression**: Select instrument → Enter quantity → Choose order type → Validate suitability → Submit → Order enters PENDING → Executes after 2s → Holdings/cash update → Audit logged
-- **Success criteria**: Validation blocks unsuitable trades, insufficient cash, excessive concentration; idempotency prevents duplicates; AI can draft order notes
+### Easy Investment Actions
+- **Functionality**: Simple interface to buy/sell investments, transfer funds, or implement AI recommendations
+- **Purpose**: Make investing straightforward while ensuring decisions align with risk tolerance and goals
+- **Trigger**: Click "Make Changes" from portfolio or recommendations
+- **Progression**: Select action type → Choose investment → Enter amount → See impact preview → Review AI explanation → Confirm → Transaction processes → Portfolio updates
+- **Success criteria**: Clear warnings for risky actions, confirmation shows before/after comparison, AI explains immediate and long-term impact
 
-### Next Best Actions (Rule Engine)
-- **Functionality**: Automated recommendations based on portfolio/profile rules
-- **Purpose**: Surface proactive opportunities for advisors to add value
-- **Trigger**: Calculated on dashboard load and client profile load
-- **Progression**: Rules evaluate client state → Actions generated if thresholds met → Displayed with priority → Advisor clicks action → Navigates to relevant page → Takes action
-- **Success criteria**: Goal gap >$50k suggests increase, risk >180d suggests refresh, drift >8% suggests rebalance, cash >10% suggests invest
+### Smart Suggestions & Insights
+- **Functionality**: Proactive notifications about opportunities, risks, and recommended actions
+- **Purpose**: Keep clients on track toward goals without constant monitoring
+- **Trigger**: Displayed on dashboard; updated as financial situation changes
+- **Progression**: System evaluates goals and portfolio → Identifies opportunities or concerns → Generates friendly suggestions → Client reviews → Can ask AI to explain → Takes action or dismisses
+- **Success criteria**: Suggestions feel helpful not pushy, AI explains reasoning clearly, priorities ranked by impact on goals
 
-### Goals Planning & Tracking
-- **Functionality**: Define retirement/house/education goals with target amount/date, track progress, calculate gap and suggested monthly contribution
-- **Purpose**: Help clients visualize long-term objectives and required savings
-- **Trigger**: Navigate to goals tab, click "Add Goal"
-- **Progression**: Enter goal details → System calculates monthly need → Shows progress bar → Updates as portfolio value changes → AI explains gap and options
-- **Success criteria**: Math accurately calculates months remaining and required monthly contribution, progress reflects actual portfolio allocation to goal
+### Financial Goals & Planning
+- **Functionality**: Create and track life goals (retirement, home purchase, education) with progress visualization and savings recommendations
+- **Purpose**: Connect daily investment decisions to meaningful life objectives
+- **Trigger**: Navigate to "My Goals" section or click "Add Goal" from dashboard
+- **Progression**: Define goal (type, amount, timeline) → AI calculates required savings → View progress visualization → Get personalized tips → Adjust contributions → See updated projections
+- **Success criteria**: Math accurately projects required monthly savings, progress bars motivate action, AI explains trade-offs and options in accessible language
 
-### Audit Trail & AI Logging
-- **Functionality**: Immutable log of all material actions (risk updates, orders, goal changes) and AI interactions (prompts, responses, tokens)
-- **Purpose**: Provide compliance audit capability and AI transparency
-- **Trigger**: Automatic on every logged action; viewable on client detail page
-- **Progression**: Action occurs → Event written with timestamp, actor, details → Displayed in chronological feed → AI events show expand/collapse for prompt/response
-- **Success criteria**: All critical actions logged, AI interactions include full prompt/response, events immutable, filterable by type
+### Activity History & Transparency
+- **Functionality**: Complete log of all transactions, AI interactions, and portfolio changes
+- **Purpose**: Build trust through total transparency and help clients understand past decisions
+- **Trigger**: Navigate to "Activity" section; also viewable from AI assistant
+- **Progression**: View timeline of actions → Filter by type (transactions, AI chats, portfolio changes) → Expand details → Review AI conversation history → See reasoning behind past recommendations
+- **Success criteria**: All actions logged with timestamps, AI interactions show full context, clients can review and learn from history
 
 ## Edge Case Handling
 
-- **Insufficient Cash for Order**: Validation blocks order submission, displays required amount vs available cash with clear error message
-- **Instrument Not Suitable for Risk Profile**: Suitability check prevents high-risk instruments for conservative clients, shows explanation of mismatch
-- **Stale Risk Profile**: Warning badge on profiles >180 days old, surfaces in next best actions, advisor prompted to refresh
-- **Extreme Portfolio Concentration**: If single holding >40%, warning displayed and rebalance action suggested
-- **AI Offline Mode**: All AI features gracefully degrade to deterministic mock responses when spark.llm unavailable, clearly labeled as "Demo Response"
-- **Empty Portfolio**: Show onboarding message with "Fund Account" CTA instead of empty table
-- **Division by Zero in Returns**: Handle zero initial value gracefully in performance calculations, show "N/A" instead of Infinity
-- **Missing Goal Target Date**: Require target date for monthly contribution calculation, default to 30 years if somehow omitted
-- **Duplicate Order Submission**: Idempotency check prevents processing same order twice within 60s window
+- **Insufficient Funds for Investment**: Clear explanation of available cash, suggestion to sell other holdings or add funds, AI explains impact options
+- **Investment Too Risky for Profile**: System prevents purchase, AI explains why it doesn't match risk tolerance, suggests suitable alternatives
+- **Outdated Risk Profile**: Friendly reminder appears after 180 days, simple questionnaire to refresh, AI explains how changes might affect recommendations
+- **Concentrated Portfolio**: Warning appears if single holding >40%, AI explains diversification benefits, suggests specific rebalancing actions
+- **AI Service Unavailable**: All AI features show helpful placeholder responses, clearly marked as demo content, core portfolio functions still work
+- **No Investments Yet**: Welcoming onboarding experience, AI offers to explain investing basics, clear CTAs to fund account and start investing
+- **Goal Deadline Passed**: Gentle handling of missed goals, AI helps reframe or extend timeline, focus on progress made rather than failure
+- **Extreme Market Movements**: AI provides context and reassurance during volatility, explains long-term perspective, discourages panic decisions
+- **Conflicting Goals**: When goals compete for limited funds, AI helps prioritize based on urgency and personal values
 
 ## Design Direction
 
-The design should evoke **institutional trust, precision, and modern sophistication**. This is software for managing significant wealth—it must feel serious, competent, and thoughtfully engineered. Visual cues should communicate data integrity, careful construction, and professional-grade tooling. The AI features should feel like thoughtful augmentation, not gimmicks—helpful assistants that make complex information accessible without oversimplifying.
+The design should evoke **personal empowerment, clarity, and growth**. This is software that helps individuals take control of their financial future—it must feel encouraging, accessible, and confidence-building. Visual language should communicate progress, possibility, and human-centered design. The AI assistant should feel like a knowledgeable friend, not a corporate tool—helpful, patient, and genuinely invested in the user's success.
 
 ## Color Selection
 
-A refined palette balancing traditional financial trustworthiness (navy, slate) with contemporary fintech energy (teal accents).
+A vibrant yet trustworthy palette balancing approachability (warm greens suggesting growth) with professionalism (deep blues for stability).
 
-- **Primary Color**: Deep Navy `oklch(0.25 0.05 250)` - Conveys authority, stability, and financial expertise; used for primary actions and key navigation
+- **Primary Color**: Rich Forest Green `oklch(0.45 0.12 155)` - Represents growth, prosperity, and environmental consciousness; used for positive actions, progress indicators, and success states
 - **Secondary Colors**: 
-  - Slate `oklch(0.45 0.01 250)` for secondary buttons and muted backgrounds
-  - Warm Gray `oklch(0.55 0.02 80)` for borders and dividers
-- **Accent Color**: Vibrant Teal `oklch(0.65 0.15 195)` - Represents innovation and AI features, used for GenAI copilot elements, focus states, and positive confirmations
+  - Deep Ocean Blue `oklch(0.35 0.08 240)` for trust, stability, and secondary buttons
+  - Warm Amber `oklch(0.70 0.15 75)` for highlights and important calls-to-action
+- **Accent Color**: Vibrant Cyan `oklch(0.65 0.15 195)` - Represents innovation and AI features, used for the AI assistant, interactive elements, and insights
 - **Foreground/Background Pairings**:
-  - Primary Navy (oklch(0.25 0.05 250)): White text (oklch(0.99 0 0)) - Ratio 11.2:1 ✓
-  - Accent Teal (oklch(0.65 0.15 195)): Dark Navy text (oklch(0.20 0.05 250)) - Ratio 7.8:1 ✓
-  - Background (oklch(0.98 0.005 250)): Dark text (oklch(0.20 0.02 250)) - Ratio 14.5:1 ✓
-  - Muted (oklch(0.94 0.01 250)): Slate text (oklch(0.40 0.02 250)) - Ratio 8.9:1 ✓
+  - Primary Green (oklch(0.45 0.12 155)): White text (oklch(0.99 0 0)) - Ratio 8.2:1 ✓
+  - Accent Cyan (oklch(0.65 0.15 195)): Dark Navy text (oklch(0.20 0.05 240)) - Ratio 7.8:1 ✓
+  - Background (oklch(0.98 0.005 155)): Dark text (oklch(0.20 0.02 155)) - Ratio 14.5:1 ✓
+  - Amber (oklch(0.70 0.15 75)): Dark text (oklch(0.25 0.05 75)) - Ratio 6.5:1 ✓
 
 ## Font Selection
 
-Typography must communicate precision and trustworthiness while remaining highly readable across dense financial tables and dashboard metrics.
+Typography must feel friendly and modern while maintaining clarity for financial data and dense information displays.
 
-- **Primary**: **Inter** for UI elements, tables, and body text—geometric precision with excellent readability at small sizes for dense data tables
-- **Display**: **Space Grotesk** for headings and KPI numbers—distinctive character that adds modern personality without sacrificing legibility
+- **Primary**: **Plus Jakarta Sans** for UI elements, tables, and body text—humanist warmth with excellent readability, friendlier than corporate fonts
+- **Display**: **Outfit** for headings and large numbers—geometric and bold for impact, distinctly modern
 
 **Typographic Hierarchy**:
-- H1 (Page Titles): Space Grotesk Bold / 32px / tight letter-spacing (-0.02em) / line-height 1.2
-- H2 (Section Headers): Space Grotesk Semibold / 24px / tight letter-spacing / line-height 1.3
-- H3 (Card Titles): Inter Semibold / 18px / normal / line-height 1.4
-- Body (General Text): Inter Regular / 15px / normal / line-height 1.6
-- Small (Labels, Captions): Inter Medium / 13px / normal / line-height 1.5
-- Tables: Inter Regular / 14px / tabular-nums / line-height 1.5
-- KPI Numbers: Space Grotesk Bold / 28px / tabular-nums / line-height 1.2
+- H1 (Page Titles): Outfit Bold / 36px / tight letter-spacing (-0.01em) / line-height 1.2
+- H2 (Section Headers): Outfit Semibold / 26px / normal / line-height 1.3
+- H3 (Card Titles): Plus Jakarta Sans Bold / 18px / normal / line-height 1.4
+- Body (General Text): Plus Jakarta Sans Regular / 15px / normal / line-height 1.6
+- Small (Labels, Captions): Plus Jakarta Sans Medium / 13px / normal / line-height 1.5
+- Tables: Plus Jakarta Sans Regular / 14px / tabular-nums / line-height 1.5
+- Large Numbers: Outfit Bold / 32px / tabular-nums / line-height 1.1
 
 ## Animations
 
-Animations should reinforce **data state transitions and system responsiveness** while maintaining professional restraint. Use motion to clarify cause-and-effect (order submission → execution), guide attention to updated values (portfolio recalculation), and provide confident feedback. Avoid decorative motion—every animation serves data comprehension or confirms user action.
+Animations should communicate **progress, growth, and positive momentum** while providing clear feedback. Use motion to celebrate achievements (goal progress), clarify state changes (investment execution), and make the AI assistant feel responsive and alive. Every animation should feel encouraging and purposeful.
 
-- Page transitions: 250ms ease-out for tab switching and navigation
-- AI response generation: Subtle pulse on copilot panel while loading, smooth fade-in for response text
-- Order execution: Progress indicator transitions from "validating" → "executing" → "complete" with color shift
-- KPI updates: Brief highlight flash (300ms) when dashboard values recalculate
-- Hover states: 120ms ease-in-out for button state changes
-- Chart interactions: 200ms for tooltip appearance and bar/segment highlights
+- Page transitions: 300ms ease-out with subtle slide for navigation feeling like forward progress
+- AI assistant responses: Gentle typing animation effect (100ms per character group) to feel conversational
+- Goal progress updates: Smooth bar growth animation (500ms) with celebration effect when milestones hit
+- Investment execution: Multi-step progress indicator with checkmarks appearing sequentially
+- Success states: Brief scale-up pulse (200ms) with soft glow for completed actions
+- Hover states: 150ms ease-in-out with gentle lift for interactive elements
+- Chart interactions: 250ms smooth transitions for data updates and tooltip appearances
 
 ## Component Selection
 
 **Components**:
-- **Dashboard KPIs**: Custom cards with Space Grotesk numbers, Inter labels, subtle shadow and border, animated value transitions
-- **Client List**: Shadcn Table with sortable columns, row hover states, sticky header for long lists
-- **Portfolio Holdings**: Shadcn Table with tabular-nums, color-coded performance cells (green/red), expandable rows for transaction history
-- **Allocation Chart**: Recharts PieChart with custom tooltips showing percentage and dollar value, synchronized hover states
-- **Advisor Copilot Panel**: Shadcn Card with Textarea for input, Button for submit, ScrollArea for conversation history, distinct teal accent border
-- **Next Best Actions**: Custom list with Badge for priority, phosphor icons for action type, subtle pulse animation for high-priority items
-- **Order Form**: Shadcn Form with Input, Select, RadioGroup for order type, validation error display, confirmation Dialog
-- **Risk Profile Display**: Custom component with progress bar (1-10 scale), Badge for category, warning icon if stale
-- **Goals Tracker**: Custom cards with Progress component, calculated values in Space Grotesk, "Add Goal" using Dialog
-- **Audit Trail**: ScrollArea with timeline-style events, Accordion for AI interaction details (expand to see prompt/response)
-- **Navigation**: Shadcn Tabs for client detail sections (Profile/Portfolio/Orders/Goals), sidebar navigation for advisor
+- **Dashboard Wealth Cards**: Large, friendly cards with Outfit numbers, Plus Jakarta Sans labels, soft shadows, growth animations on value updates
+- **Portfolio Holdings**: Shadcn Table with clear hierarchy, color-coded gains/losses, tap to expand for details on mobile
+- **Allocation Visualization**: Recharts DonutChart with interactive segments, smooth transitions, clear labels without jargon
+- **AI Financial Assistant**: Prominent chat-style interface with user bubbles (right) and AI bubbles (left, cyan accent), typing indicators, expandable source citations
+- **Smart Suggestions**: Card-based list with friendly icons, clear benefit statements, "Tell me more" expands AI explanation
+- **Investment Actions**: Shadcn Dialog with step-by-step wizard, preview of changes before confirmation, AI explains impact at each step
+- **Risk Assessment**: Interactive slider (1-10 scale) with friendly category labels, visual examples of portfolio types, AI explains implications
+- **Goals Dashboard**: Card grid with large Progress rings, milestone celebrations, visual countdown to targets
+- **Activity Timeline**: Clean vertical timeline with icons, expandable details, filter chips for transaction types
+- **Navigation**: Simple top nav with clear sections (Dashboard, Portfolio, Goals, Activity), AI assistant always accessible
 
 **Customizations**:
-- Custom AI response card with teal left-border accent and "Sources Used" collapsible section
-- Custom metric card component combining large numbers (Space Grotesk) with trend indicators (phosphor icons)
-- Custom allocation drift indicator showing current vs target with color-coded variance
-- Custom order status badge with lifecycle-specific colors (pending=yellow, executed=green, failed=red)
+- Custom AI message bubble with avatar, citation badges that expand inline, copy conversation button
+- Custom wealth summary card with animated countup effect for numbers, sparkle accents for growth
+- Custom goal card with circular progress, confetti animation when milestones reached
+- Custom investment preview component showing before/after comparison with diff highlighting
 
 **States**:
-- Buttons: Default subtle shadow, hover lifts slightly with deeper shadow, active scales down 98%, disabled reduces opacity to 40%
-- Inputs: Default slate border, focus shows teal ring with 2px offset, error state red border and shake animation
-- Tables: Row hover applies subtle background tint, selected row shows teal left-border accent
-- AI Panel: Idle state muted, loading shows pulsing teal border, response arrived shows brief glow then settles
+- Buttons: Default with soft shadow, hover scales 102% with deeper shadow, active scales 98%, disabled grays out with tooltip explanation
+- Inputs: Default soft border, focus shows cyan glow ring, success state green checkmark, error state shows inline explanation
+- Cards: Hover lifts slightly (4px), active presses down, selected shows cyan left border
+- AI Panel: Idle with gentle pulse on input, loading shows animated dots, new message slides in from bottom
 
 **Icon Selection** (phosphor-icons):
-- ChartLine: Portfolio performance
-- Target: Goals
-- ShieldCheck: Risk profile
-- ArrowsLeftRight: Orders/trades
-- BriefCase: Advisor role
-- User: Client role
-- Sparkle: AI features
-- ClockCounterClockwise: Audit trail
-- TrendUp/TrendDown: Performance indicators
-- Warning: Alerts and compliance warnings
+- TrendUp: Portfolio growth and positive performance
+- Target: Goals and objectives
+- Sparkle: AI assistant and insights
+- Wallet: Account and cash balance
+- ChartPie: Asset allocation
+- ArrowsClockwise: Rebalancing
+- Lightbulb: Smart suggestions
+- Clock: Activity history
+- ShieldCheck: Risk and security
+- Confetti: Celebrations and milestones
 
 **Spacing**:
-- Page padding: px-8 py-6
-- Card padding: p-6
-- Section gaps: gap-6 for major sections, gap-4 for related items, gap-2 for tight groupings
-- Table cell padding: px-4 py-3
-- Form field spacing: space-y-4
+- Page padding: px-6 py-8 for breathing room
+- Card padding: p-6 to p-8 for generous whitespace
+- Section gaps: gap-8 for major sections, gap-6 for related cards, gap-4 for form fields
+- Table cell padding: px-6 py-4 for comfortable touch targets
+- AI message spacing: space-y-4 for conversation flow
 
 **Mobile**:
-- Stack KPI cards vertically below 1024px
-- Convert client table to card list below 768px
-- Hide copilot panel on mobile, accessible via floating action button
-- Charts resize to full-width container
-- Navigation converts to bottom tab bar on mobile
-- Forms maintain single column, buttons expand to full-width
+- Single column layout below 768px
+- Wealth cards stack vertically with full-width
+- Charts adapt to container, legends move below
+- AI assistant takes full screen in modal on mobile with close button
+- Navigation becomes bottom tab bar with icons only
+- Tables convert to card view with key info visible, tap to expand
+- Action buttons become sticky bottom bar
