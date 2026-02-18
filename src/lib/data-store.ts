@@ -13,6 +13,7 @@ import type {
   AuditEvent,
   AiInteraction,
   Transaction,
+  BankStatement,
 } from './types'
 import {
   SEED_USERS,
@@ -41,6 +42,7 @@ export function useDataStore() {
   const [nextBestActions, setNextBestActions] = useKV<NextBestAction[]>('next_best_actions', [])
   const [auditEvents, setAuditEvents] = useKV<AuditEvent[]>('audit_events', [])
   const [aiInteractions, setAiInteractions] = useKV<AiInteraction[]>('ai_interactions', [])
+  const [bankStatements, setBankStatements] = useKV<BankStatement[]>('bank_statements', [])
 
   return {
     users,
@@ -65,5 +67,7 @@ export function useDataStore() {
     setAuditEvents,
     aiInteractions,
     setAiInteractions,
+    bankStatements,
+    setBankStatements,
   }
 }

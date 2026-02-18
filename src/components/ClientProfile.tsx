@@ -18,6 +18,7 @@ import {
   PencilSimple,
   Eye,
   Users,
+  UploadSimple,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
@@ -32,7 +33,9 @@ import { MilestoneCelebration } from './MilestoneCelebration'
 import { GoalDetailView } from './GoalDetailView'
 import { GoalComparisonView } from './GoalComparisonView'
 import { FamilyBudgetDialog } from './FamilyBudgetDialog'
-import type { Goal, GoalMilestone, GoalType, FamilyMember } from '@/lib/types'
+import { BankStatementUpload } from './BankStatementUpload'
+import { processBankStatement } from '@/lib/bank-statement-processor'
+import type { Goal, GoalMilestone, GoalType, FamilyMember, BankStatement } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -48,6 +51,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     goals,
     portfolios,
     setGoals,
+    bankStatements,
+    setBankStatements,
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
@@ -69,6 +74,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const riskProfile = useMemo(() => (riskProfiles || []).find(rp => rp.clientId === clientId), [riskProfiles, clientId])
   const clientGoals = useMemo(() => (goals || []).filter(g => g.clientId === clientId), [goals, clientId])
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
+  const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
 
   if (!client || !profile || !riskProfile || !portfolio) {
     return <div>Account not found</div>
@@ -261,6 +267,21 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
+  const handleBankStatementUpload = async (file: File) => {
+    const statement = await processBankStatement(file, clientId)
+    setBankStatements((currentStatements) => [...(currentStatements || []), statement])
+    
+    setTimeout(() => {
+      setBankStatements((currentStatements) =>
+        (currentStatements || []).map((s) =>
+          s.id === statement.id
+            ? { ...s, status: 'COMPLETED' as const, processedAt: new Date().toISOString() }
+            : s
+        )
+      )
+    }, 2500)
+  }
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-6">
@@ -327,13 +348,13 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-5 w-full">
+            <TabsList className="grid grid-cols-6 w-full">
               <TabsTrigger value="overview" className="gap-2">
                 <UserIcon size={16} />
                 <span className="hidden sm:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger value="insights" className="gap-2">
-                <Target size={16} />
+                <Lightbulb size={16} />
                 <span className="hidden sm:inline">Insights</span>
               </TabsTrigger>
               <TabsTrigger value="portfolio" className="gap-2">
@@ -343,6 +364,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               <TabsTrigger value="goals" className="gap-2">
                 <Target size={16} />
                 <span className="hidden sm:inline">Goals</span>
+              </TabsTrigger>
+              <TabsTrigger value="upload" className="gap-2">
+                <UploadSimple size={16} />
+                <span className="hidden sm:inline">Upload</span>
               </TabsTrigger>
               <TabsTrigger value="activity" className="gap-2">
                 <ClockCounterClockwise size={16} />
@@ -633,6 +658,13 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="upload" className="mt-6">
+              <BankStatementUpload
+                statements={clientStatements}
+                onUpload={handleBankStatementUpload}
+              />
             </TabsContent>
 
             <TabsContent value="activity" className="mt-6">
