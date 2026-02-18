@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
 import { ScrollArea } from './ui/scroll-area'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import {
   FilePdf,
   UploadSimple,
@@ -15,8 +16,13 @@ import {
   Info,
   Sparkle,
   ChartPie,
+  DownloadSimple,
+  ChartLine,
+  CalendarBlank,
+  CreditCard,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { BankStatement, BankTransaction, CategorySummary } from '@/lib/types'
 
 interface BankStatementUploadProps {
@@ -25,11 +31,59 @@ interface BankStatementUploadProps {
   onProcess?: (statementId: string) => Promise<void>
 }
 
+const COLORS = ['oklch(0.45 0.12 155)', 'oklch(0.65 0.15 195)', 'oklch(0.35 0.08 240)', 'oklch(0.70 0.15 75)', 'oklch(0.55 0.15 145)', 'oklch(0.55 0.22 25)', 'oklch(0.60 0.10 300)', 'oklch(0.50 0.08 180)']
+
 export function BankStatementUpload({ statements, onUpload, onProcess }: BankStatementUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedStatement, setSelectedStatement] = useState<BankStatement | null>(null)
+  const [insightsView, setInsightsView] = useState<'overview' | 'trends' | 'transactions'>('overview')
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
+  const [aiInsights, setAiInsights] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const aggregatedData = useMemo(() => {
+    if (statements.length === 0) return null
+
+    const completedStatements = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
+    if (completedStatements.length === 0) return null
+
+    const totalIncome = completedStatements.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
+    const totalExpenses = completedStatements.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+
+    const categoryMap = new Map<string, number>()
+    completedStatements.forEach(s => {
+      s.extractedData?.categorySummary?.forEach(cat => {
+        categoryMap.set(cat.category, (categoryMap.get(cat.category) || 0) + cat.amount)
+      })
+    })
+
+    const categorySummary = Array.from(categoryMap.entries())
+      .map(([category, amount]) => ({
+        category,
+        amount,
+        percentage: (amount / totalExpenses) * 100
+      }))
+      .sort((a, b) => b.amount - a.amount)
+
+    const monthlyTrends = completedStatements
+      .map(s => ({
+        month: s.extractedData?.statementDate ? new Date(s.extractedData.statementDate).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : 'N/A',
+        income: s.extractedData?.totalIncome || 0,
+        expenses: s.extractedData?.totalExpenses || 0,
+        net: (s.extractedData?.totalIncome || 0) - (s.extractedData?.totalExpenses || 0)
+      }))
+      .reverse()
+
+    return {
+      totalIncome,
+      totalExpenses,
+      netSavings: totalIncome - totalExpenses,
+      savingsRate: totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0,
+      categorySummary,
+      monthlyTrends
+    }
+  }, [statements])
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -81,6 +135,73 @@ export function BankStatementUpload({ statements, onUpload, onProcess }: BankSta
     } finally {
       setIsProcessing(false)
     }
+  }
+
+  const handleGenerateInsights = async () => {
+    if (!aggregatedData) return
+
+    setIsGeneratingInsights(true)
+    try {
+      const prompt = window.spark.llmPrompt`You are a financial advisor analyzing bank statement data. Based on the following spending data, provide 3-5 actionable insights and recommendations:
+
+Total Income: $${aggregatedData.totalIncome}
+Total Expenses: $${aggregatedData.totalExpenses}
+Net Savings: $${aggregatedData.netSavings}
+Savings Rate: ${aggregatedData.savingsRate.toFixed(1)}%
+
+Top Spending Categories:
+${aggregatedData.categorySummary.slice(0, 5).map(c => `- ${c.category}: $${c.amount.toFixed(2)} (${c.percentage.toFixed(1)}%)`).join('\n')}
+
+Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
+1. Spending patterns and areas of concern
+2. Savings opportunities
+3. Budget optimization suggestions
+4. Positive behaviors to reinforce
+
+Keep each insight concise (2-3 sentences max).`
+
+      const response = await window.spark.llm(prompt, 'gpt-4o-mini')
+      setAiInsights(response)
+      toast.success('Insights generated successfully')
+    } catch (error) {
+      setAiInsights('Unable to generate insights at this time. Please ensure you have uploaded and processed at least one bank statement.')
+      toast.error('Failed to generate insights')
+    } finally {
+      setIsGeneratingInsights(false)
+    }
+  }
+
+  const handleExportCSV = () => {
+    if (!selectedStatement?.extractedData?.transactions) {
+      toast.error('No transaction data available')
+      return
+    }
+
+    const transactions = selectedStatement.extractedData.transactions
+    const csvHeader = 'Date,Description,Amount,Type,Category,Balance\n'
+    const csvRows = transactions.map(tx => 
+      `${tx.date},"${tx.description}",${tx.amount},${tx.type},${tx.category || 'Uncategorized'},${tx.balance || ''}`
+    ).join('\n')
+    
+    const csvContent = csvHeader + csvRows
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    
+    link.setAttribute('href', url)
+    link.setAttribute('download', `${selectedStatement.fileName.replace(/\.[^/.]+$/, '')}_transactions.csv`)
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    
+    toast.success('CSV exported successfully')
+  }
+
+  const handleExportPDF = () => {
+    toast.info('PDF export feature', {
+      description: 'In production, this would generate a detailed PDF report'
+    })
   }
 
   const getStatusColor = (status: string) => {
@@ -246,39 +367,284 @@ export function BankStatementUpload({ statements, onUpload, onProcess }: BankSta
         </Card>
       )}
 
-      {selectedStatement && selectedStatement.status === 'COMPLETED' && selectedStatement.extractedData && (
+      {aggregatedData && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ChartPie size={20} weight="duotone" />
-              Spending Breakdown
-            </CardTitle>
-            <CardDescription>Category analysis for {selectedStatement.fileName}</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ChartLine size={20} weight="duotone" />
+                  Financial Insights Dashboard
+                </CardTitle>
+                <CardDescription>Comprehensive analysis of your spending patterns</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+                  <DownloadSimple size={16} />
+                  Export PDF
+                </Button>
+                {selectedStatement && (
+                  <Button variant="outline" size="sm" onClick={handleExportCSV} className="gap-2">
+                    <DownloadSimple size={16} />
+                    Export CSV
+                  </Button>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {selectedStatement.extractedData.categorySummary && selectedStatement.extractedData.categorySummary.length > 0 ? (
-              <div className="space-y-3">
-                {selectedStatement.extractedData.categorySummary.map((category) => (
-                  <div key={category.category} className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{category.category}</span>
+            <Tabs value={insightsView} onValueChange={(v) => setInsightsView(v as typeof insightsView)}>
+              <TabsList className="grid grid-cols-3 w-full mb-6">
+                <TabsTrigger value="overview" className="gap-2">
+                  <ChartPie size={16} />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="trends" className="gap-2">
+                  <ChartLine size={16} />
+                  Trends
+                </TabsTrigger>
+                <TabsTrigger value="transactions" className="gap-2">
+                  <CreditCard size={16} />
+                  Transactions
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="space-y-6">
+                <div className="grid md:grid-cols-4 gap-4">
+                  <Card className="bg-gradient-to-br from-success/10 to-transparent border-success/20">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <TrendUp size={14} className="text-success" />
+                        Total Income
+                      </div>
+                      <p className="text-2xl font-display font-bold text-success">
+                        ${aggregatedData.totalIncome.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-destructive/10 to-transparent border-destructive/20">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                        <TrendDown size={14} className="text-destructive" />
+                        Total Expenses
+                      </div>
+                      <p className="text-2xl font-display font-bold text-destructive">
+                        ${aggregatedData.totalExpenses.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
+                    <CardContent className="pt-6">
+                      <div className="text-sm text-muted-foreground mb-1">Net Savings</div>
+                      <p className="text-2xl font-display font-bold text-primary">
+                        ${aggregatedData.netSavings.toLocaleString()}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-gradient-to-br from-accent/10 to-transparent border-accent/20">
+                    <CardContent className="pt-6">
+                      <div className="text-sm text-muted-foreground mb-1">Savings Rate</div>
+                      <p className="text-2xl font-display font-bold text-accent">
+                        {aggregatedData.savingsRate.toFixed(1)}%
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Spending by Category</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={aggregatedData.categorySummary.slice(0, 8)}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={(entry) => `${entry.category}: ${entry.percentage.toFixed(0)}%`}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="amount"
+                          >
+                            {aggregatedData.categorySummary.slice(0, 8).map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Top Spending Categories</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {aggregatedData.categorySummary.slice(0, 6).map((category, index) => (
+                          <div key={category.category}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium">{category.category}</span>
+                              <span className="text-sm font-semibold">${category.amount.toFixed(0)}</span>
+                            </div>
+                            <Progress value={category.percentage} className="h-2" />
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="ai-glow">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">{category.transactionCount} transactions</span>
-                        <span className="font-semibold">${category.amount.toLocaleString()}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {category.percentage.toFixed(1)}%
+                        <Sparkle size={20} weight="duotone" className="text-accent" />
+                        <CardTitle className="text-base">AI-Powered Insights</CardTitle>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleGenerateInsights}
+                        disabled={isGeneratingInsights}
+                        className="gap-2"
+                      >
+                        <Sparkle size={14} />
+                        {isGeneratingInsights ? 'Generating...' : 'Generate Insights'}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {aiInsights ? (
+                      <div className="prose prose-sm max-w-none">
+                        <p className="whitespace-pre-wrap text-sm">{aiInsights}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Click "Generate Insights" to get personalized financial recommendations based on your spending data
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="trends" className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Monthly Income vs Expenses</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={aggregatedData.monthlyTrends}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                        <Legend />
+                        <Bar dataKey="income" fill="oklch(0.55 0.15 145)" name="Income" />
+                        <Bar dataKey="expenses" fill="oklch(0.55 0.22 25)" name="Expenses" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Net Savings Trend</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={250}>
+                      <LineChart data={aggregatedData.monthlyTrends}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                        <Legend />
+                        <Line 
+                          type="monotone" 
+                          dataKey="net" 
+                          stroke="oklch(0.45 0.12 155)" 
+                          strokeWidth={3}
+                          name="Net Savings"
+                          dot={{ fill: 'oklch(0.45 0.12 155)', r: 5 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="transactions" className="space-y-4">
+                {selectedStatement?.extractedData?.transactions ? (
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Transaction History</CardTitle>
+                        <Badge variant="outline">
+                          {selectedStatement.extractedData.transactions.length} transactions
                         </Badge>
                       </div>
-                    </div>
-                    <Progress value={category.percentage} className="h-2" />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No category data available
-              </p>
-            )}
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[500px]">
+                        <div className="space-y-2">
+                          {selectedStatement.extractedData.transactions.map((tx) => (
+                            <div key={tx.id} className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5">
+                              <div className="flex items-start gap-3 flex-1">
+                                <div className={`p-2 rounded-lg ${tx.type === 'CREDIT' ? 'bg-success/10' : 'bg-muted'}`}>
+                                  {tx.type === 'CREDIT' ? (
+                                    <TrendUp size={16} className="text-success" />
+                                  ) : (
+                                    <TrendDown size={16} className="text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{tx.description}</p>
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                      <CalendarBlank size={12} />
+                                      {new Date(tx.date).toLocaleDateString()}
+                                    </p>
+                                    {tx.category && (
+                                      <Badge variant="outline" className="text-xs">
+                                        {tx.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`font-semibold ${tx.type === 'CREDIT' ? 'text-success' : 'text-foreground'}`}>
+                                  {tx.type === 'CREDIT' ? '+' : '-'}${tx.amount.toLocaleString()}
+                                </p>
+                                {tx.balance !== undefined && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Balance: ${tx.balance.toLocaleString()}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="text-center py-12">
+                      <CreditCard size={48} className="mx-auto mb-4 text-muted-foreground" weight="duotone" />
+                      <p className="text-sm text-muted-foreground">
+                        Select a processed statement to view transactions
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
       )}

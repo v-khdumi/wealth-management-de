@@ -181,11 +181,11 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Success criteria**: Rankings feel logical and defensible, AI explains reasoning clearly, manual override is intuitive, high-priority goals get more prominence in UI, rankings update as circumstances change
 
 ### Bank Statement Upload & Analysis
-- **Functionality**: Upload bank statements for AI-powered extraction of financial data and spending insights
-- **Purpose**: Automatically incorporate external financial data to enhance wealth management analysis
-- **Trigger**: Navigate to "Bank Statements" section → Click upload area → Select PDF or image file
-- **Progression**: User uploads statement file (PDF/image, max 10MB) → File uploads with progress indicator → AI processes document → Extracts account details, balances, transactions, categories → Shows processing status → When complete, displays opening/closing balance, total income/expenses → Shows transaction list with auto-categorization → Generates spending breakdown by category with percentages → Insights integrated into overall financial picture → User can view historical statements anytime
-- **Success criteria**: Upload process is smooth and fast, AI accurately extracts key financial data, categorization makes sense (85%+ accuracy), spending breakdown is clear and actionable, extracted data integrates with existing financial view, supports common statement formats
+- **Functionality**: Upload bank statements for AI-powered extraction of financial data, spending insights, and comprehensive visualization
+- **Purpose**: Automatically incorporate external financial data to enhance wealth management analysis with detailed spending patterns and trends
+- **Trigger**: Navigate to "Upload" tab → Click upload area → Select PDF or image file
+- **Progression**: User uploads statement file (PDF/image, max 10MB) → File uploads with progress indicator → AI processes document with OCR → Extracts account details, balances, transactions, categories → Shows processing status → When complete, displays opening/closing balance, total income/expenses → Shows transaction list with auto-categorization → Generates spending breakdown by category with percentages → Views aggregated insights across all statements → Explores monthly trends visualization → Generates AI-powered spending insights → Exports data to PDF or CSV → Insights integrated into overall financial picture
+- **Success criteria**: Upload process is smooth and fast, AI accurately extracts key financial data through OCR, categorization makes sense (85%+ accuracy), spending breakdown is clear and actionable, monthly trends show income/expenses/net savings over time, AI insights are personalized and actionable, export functionality works for both PDF and CSV, extracted data integrates with existing financial view, supports common statement formats, aggregated view provides comprehensive financial overview
 
 ## Edge Case Handling
 

@@ -51,6 +51,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     instruments,
     modelPortfolios,
     aiInteractions,
+    bankStatements,
     setAiInteractions,
     setGoals,
   } = useDataStore()
@@ -68,6 +69,27 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     () => holdings?.filter(h => h.portfolioId === portfolio?.id) || [],
     [holdings, portfolio?.id]
   )
+  const clientStatements = useMemo(
+    () => bankStatements?.filter(s => s.userId === clientId && s.status === 'COMPLETED') || [],
+    [bankStatements, clientId]
+  )
+
+  const bankDataSummary = useMemo(() => {
+    if (!clientStatements || clientStatements.length === 0) return null
+
+    const totalIncome = clientStatements.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
+    const totalExpenses = clientStatements.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+    const netSavings = totalIncome - totalExpenses
+    const savingsRate = totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0
+
+    return {
+      totalIncome,
+      totalExpenses,
+      netSavings,
+      savingsRate,
+      statementCount: clientStatements.length
+    }
+  }, [clientStatements])
 
   const nextBestActions = useMemo(() => {
     if (!portfolio || !riskProfile || !instruments || !modelPortfolios) return []
@@ -317,6 +339,61 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
           </CardContent>
         </Card>
       </div>
+
+      {bankDataSummary && (
+        <Card className="border-2 border-success/30 bg-gradient-to-br from-success/5 to-transparent">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <CurrencyDollar size={24} weight="duotone" className="text-success" />
+                  Bank Statement Insights
+                </CardTitle>
+                <CardDescription>
+                  Cash flow analysis from {bankDataSummary.statementCount} uploaded {bankDataSummary.statementCount === 1 ? 'statement' : 'statements'}
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-lg bg-success/10 border border-success/20">
+                <p className="text-sm text-muted-foreground mb-1">Total Income</p>
+                <p className="text-2xl font-display font-bold text-success">
+                  ${bankDataSummary.totalIncome.toLocaleString()}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                <p className="text-sm text-muted-foreground mb-1">Total Expenses</p>
+                <p className="text-2xl font-display font-bold text-destructive">
+                  ${bankDataSummary.totalExpenses.toLocaleString()}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                <p className="text-sm text-muted-foreground mb-1">Net Savings</p>
+                <p className="text-2xl font-display font-bold text-primary">
+                  ${bankDataSummary.netSavings.toLocaleString()}
+                </p>
+              </div>
+              <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+                <p className="text-sm text-muted-foreground mb-1">Savings Rate</p>
+                <p className="text-2xl font-display font-bold text-accent">
+                  {bankDataSummary.savingsRate.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 p-3 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                <strong>Insight:</strong> {bankDataSummary.savingsRate >= 20 
+                  ? '🎉 Excellent savings rate! You\'re building wealth effectively.'
+                  : bankDataSummary.savingsRate >= 10
+                  ? '👍 Good savings rate. Consider increasing contributions to accelerate goal achievement.'
+                  : '⚠️ Low savings rate detected. Review the Upload tab for spending breakdown and opportunities to reduce expenses.'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {aiInsights && (
         <Card className="ai-glow border-2 border-accent/30">
