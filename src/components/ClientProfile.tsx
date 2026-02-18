@@ -17,6 +17,7 @@ import {
   ArrowRight,
   PencilSimple,
   Eye,
+  Users,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
@@ -29,7 +30,9 @@ import { GoalTemplateDialog } from './GoalTemplateDialog'
 import { CustomGoalDialog } from './CustomGoalDialog'
 import { MilestoneCelebration } from './MilestoneCelebration'
 import { GoalDetailView } from './GoalDetailView'
-import type { Goal, GoalMilestone, GoalType } from '@/lib/types'
+import { GoalComparisonView } from './GoalComparisonView'
+import { FamilyBudgetDialog } from './FamilyBudgetDialog'
+import type { Goal, GoalMilestone, GoalType, FamilyMember } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -50,8 +53,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const [activeTab, setActiveTab] = useState('overview')
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
+  const [selectedGoalForFamily, setSelectedGoalForFamily] = useState<Goal | null>(null)
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showCustomGoalDialog, setShowCustomGoalDialog] = useState(false)
+  const [showComparisonView, setShowComparisonView] = useState(false)
   const [celebrationData, setCelebrationData] = useState<{
     goalName: string
     percentage: number
@@ -232,6 +237,28 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     toast.success('Custom Goal Created!', {
       description: `${goalData.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
     })
+  }
+
+  const handleSaveFamilyGoal = (goalId: string, isFamilyGoal: boolean, members?: FamilyMember[]) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          return {
+            ...g,
+            familyGoal: isFamilyGoal
+              ? {
+                  goalId: g.id,
+                  isFamily: true,
+                  members: members || [],
+                  createdBy: clientId,
+                }
+              : undefined,
+            updatedAt: new Date().toISOString(),
+          }
+        }
+        return g
+      })
+    )
   }
 
   return (
@@ -445,14 +472,25 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                         Track your progress toward life's important milestones
                       </CardDescription>
                     </div>
-                    <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
-                      <Target size={16} weight="bold" />
-                      Add Goal
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {clientGoals.length >= 2 && (
+                        <Button
+                          onClick={() => setShowComparisonView(true)}
+                          variant="outline"
+                          className="gap-2"
+                        >
+                          <ChartLine size={16} />
+                          <span className="hidden sm:inline">Compare Goals</span>
+                        </Button>
+                      )}
+                      <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
+                        <Target size={16} weight="bold" />
+                        Add Goal
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  {clientGoals.length === 0 ? (
+                <CardContent className="space-y-6">{clientGoals.length === 0 ? (
                     <div className="text-center py-12">
                       <Target size={48} className="mx-auto mb-4 text-muted-foreground/30" weight="duotone" />
                       <p className="text-muted-foreground font-medium mb-2">No goals set yet</p>
@@ -470,6 +508,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                       const required = calculateRequiredMonthlyContribution(goal)
                       const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
                       const achievedMilestones = (goal.milestones || []).filter(m => m.achievedAt).length
+                      const isFamilyGoal = goal.familyGoal?.isFamily || false
 
                       return (
                         <div key={goal.id} className="p-6 border-2 rounded-xl space-y-4 hover:border-primary/30 transition-colors">
@@ -482,9 +521,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                                     Custom
                                   </Badge>
                                 )}
+                                {isFamilyGoal && (
+                                  <Badge variant="outline" className="text-xs bg-accent/10 text-accent border-accent/30 gap-1">
+                                    <Users size={12} weight="fill" />
+                                    Family Goal
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
-                                <Badge variant="secondary">{goal.type}</Badge>
+                                <Badge variant="secondary">{goal.type === 'LIFE_EVENT' ? 'Life Event' : goal.type}</Badge>
                                 {achievedMilestones > 0 && (
                                   <Badge variant="outline" className="gap-1 bg-accent/10 text-accent border-accent/30">
                                     <Target size={12} weight="fill" />
@@ -494,6 +539,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setSelectedGoalForFamily(goal)}
+                                className="gap-2"
+                                title="Family Budgeting"
+                              >
+                                <Users size={16} />
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -634,6 +688,24 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         onClose={() => setSelectedGoalForDetail(null)}
         onUpdateGoal={handleUpdateGoal}
       />
+
+      <GoalComparisonView
+        open={showComparisonView}
+        onOpenChange={setShowComparisonView}
+        goals={clientGoals}
+      />
+
+      {selectedGoalForFamily && (
+        <FamilyBudgetDialog
+          open={!!selectedGoalForFamily}
+          onOpenChange={(open) => !open && setSelectedGoalForFamily(null)}
+          goal={selectedGoalForFamily}
+          onSave={(isFamilyGoal, members) => {
+            handleSaveFamilyGoal(selectedGoalForFamily.id, isFamilyGoal, members)
+            setSelectedGoalForFamily(null)
+          }}
+        />
+      )}
     </div>
   )
 }

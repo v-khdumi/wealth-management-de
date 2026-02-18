@@ -69,6 +69,7 @@ export function CustomGoalDialog({ open, onOpenChange, onCreateGoal }: CustomGoa
     RETIREMENT: '🏖️',
     HOUSE: '🏡',
     EDUCATION: '🎓',
+    LIFE_EVENT: '🎉',
     OTHER: '✨',
   }
 

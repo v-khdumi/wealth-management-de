@@ -4,7 +4,7 @@ export type RiskCategory = 'CONSERVATIVE' | 'MODERATE' | 'BALANCED' | 'GROWTH' |
 
 export type AssetClass = 'EQUITY' | 'FIXED_INCOME' | 'CASH' | 'ALTERNATIVE' | 'REAL_ESTATE'
 
-export type GoalType = 'RETIREMENT' | 'HOUSE' | 'EDUCATION' | 'OTHER'
+export type GoalType = 'RETIREMENT' | 'HOUSE' | 'EDUCATION' | 'LIFE_EVENT' | 'OTHER'
 
 export type OrderType = 'MARKET' | 'LIMIT'
 
@@ -94,6 +94,23 @@ export interface GoalDependency {
   description: string
 }
 
+export interface FamilyMember {
+  id: string
+  name: string
+  email: string
+  avatarUrl?: string
+  monthlyContribution: number
+  totalContributed: number
+  lastContributionDate?: string
+}
+
+export interface FamilyGoal {
+  goalId: string
+  isFamily: boolean
+  members: FamilyMember[]
+  createdBy: string
+}
+
 export interface Goal {
   id: string
   clientId: string
@@ -110,6 +127,8 @@ export interface Goal {
   progressHistory?: GoalProgressSnapshot[]
   sharedWith?: GoalFeedback[]
   dependencies?: GoalDependency[]
+  familyGoal?: FamilyGoal
+  lifeEventType?: string
 }
 
 export interface Portfolio {

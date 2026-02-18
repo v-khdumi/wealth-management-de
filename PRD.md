@@ -131,6 +131,27 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Progression**: Select related goal → Choose relationship type (Blocks, Enables, Related) → Add description → View dependency graph → See warnings for blocked goals → Get notifications when prerequisite goals are completed → Adjust priorities based on dependencies
 - **Success criteria**: Three relationship types clearly explained, visual indicators show blocking vs enabling relationships, system warns when pursuing goal that's blocked by incomplete prerequisite, completion of enabling goals triggers positive notifications, dependency count visible on goal cards
 
+### Goal Comparison View
+- **Functionality**: Compare multiple goals side-by-side to analyze trade-offs and make informed prioritization decisions
+- **Purpose**: Help users understand competing financial priorities and optimize allocation of limited resources
+- **Trigger**: Click "Compare Goals" button from Goals tab when 2+ goals exist
+- **Progression**: Select 2-4 goals to compare → View side-by-side comparison showing target amounts, timelines, monthly contributions, progress, and projected completion → See visual comparison chart → Review AI analysis of trade-offs → Adjust priorities or contributions → Save changes
+- **Success criteria**: Comparison clearly shows key metrics in parallel, highlights differences in urgency and feasibility, AI provides personalized guidance on prioritization, users can quickly identify which goals need more attention
+
+### Life Event Goal Templates
+- **Functionality**: Specialized goal templates for major life milestones like weddings, sabbaticals, starting a business, and other significant events
+- **Purpose**: Make planning for life-changing events easier with realistic budgets and timelines
+- **Trigger**: Browse goal templates under "Life Events" category
+- **Progression**: Explore life event templates (Wedding, Sabbatical, Start Business, Career Change, Home Renovation, etc.) → Select template → Review suggested amounts and timelines → Customize to personal situation → Read expert tips → Create goal
+- **Success criteria**: Templates cover 8+ major life events, amounts reflect realistic regional averages, tips provide actionable planning guidance, templates feel inspiring and supportive
+
+### Collaborative Family Budgeting
+- **Functionality**: Create shared family budget goals where multiple family members can contribute and track progress together
+- **Purpose**: Enable transparent financial planning for household expenses and shared goals
+- **Trigger**: Create new goal → Toggle "Make this a family goal" → Invite family members
+- **Progression**: Create family goal (vacation, home purchase, education) → Set total target → Invite family members via email → Each member pledges monthly contribution → View combined progress → Track individual contributions → See who's on track → Celebrate milestones together → Receive notifications when contributions are made
+- **Success criteria**: Clear visualization of each person's contribution, total progress shows combined effort, members can adjust their pledges, notifications keep everyone engaged, demo mode allows simulating multiple contributors
+
 ### Activity History & Transparency
 - **Functionality**: Complete log of all transactions, AI interactions, and portfolio changes
 - **Purpose**: Build trust through total transparency and help clients understand past decisions

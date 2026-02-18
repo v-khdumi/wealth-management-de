@@ -429,6 +429,7 @@ function TemplateCard({ template, onClick, isRecommended = false }: TemplateCard
     RETIREMENT: 'bg-purple-500/10 text-purple-700 border-purple-500/20',
     HOUSE: 'bg-blue-500/10 text-blue-700 border-blue-500/20',
     EDUCATION: 'bg-green-500/10 text-green-700 border-green-500/20',
+    LIFE_EVENT: 'bg-pink-500/10 text-pink-700 border-pink-500/20',
     OTHER: 'bg-orange-500/10 text-orange-700 border-orange-500/20',
   }
 
