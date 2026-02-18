@@ -111,6 +111,80 @@ export interface FamilyGoal {
   createdBy: string
 }
 
+export interface GoalOptimization {
+  id: string
+  goalId: string
+  type: 'REALLOCATION' | 'CONTRIBUTION_INCREASE' | 'TIMELINE_ADJUSTMENT' | 'RISK_ALIGNMENT' | 'TAX_OPTIMIZATION'
+  title: string
+  description: string
+  currentMonthly: number
+  suggestedMonthly: number
+  potentialGain: number
+  reasoning: string
+  priority: 'HIGH' | 'MEDIUM' | 'LOW'
+  acceptedAt?: string
+  rejectedAt?: string
+  createdAt: string
+}
+
+export interface GoalNotification {
+  id: string
+  goalId: string
+  userId: string
+  type: 'MILESTONE' | 'CONTRIBUTION' | 'SHARED_FEEDBACK' | 'OPTIMIZATION' | 'PRIORITY_CHANGE'
+  title: string
+  message: string
+  read: boolean
+  actionUrl?: string
+  createdAt: string
+  readAt?: string
+}
+
+export interface GoalPriority {
+  goalId: string
+  rank: number
+  autoRanked: boolean
+  reasoning?: string
+  lastUpdated: string
+}
+
+export interface BankStatement {
+  id: string
+  userId: string
+  fileName: string
+  uploadedAt: string
+  processedAt?: string
+  status: 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  extractedData?: {
+    accountNumber?: string
+    statementDate?: string
+    openingBalance?: number
+    closingBalance?: number
+    totalIncome?: number
+    totalExpenses?: number
+    transactions?: BankTransaction[]
+    categorySummary?: CategorySummary[]
+  }
+  errorMessage?: string
+}
+
+export interface BankTransaction {
+  id: string
+  date: string
+  description: string
+  amount: number
+  type: 'CREDIT' | 'DEBIT'
+  category?: string
+  balance?: number
+}
+
+export interface CategorySummary {
+  category: string
+  amount: number
+  transactionCount: number
+  percentage: number
+}
+
 export interface Goal {
   id: string
   clientId: string
@@ -129,6 +203,8 @@ export interface Goal {
   dependencies?: GoalDependency[]
   familyGoal?: FamilyGoal
   lifeEventType?: string
+  optimizations?: GoalOptimization[]
+  priority?: GoalPriority
 }
 
 export interface Portfolio {

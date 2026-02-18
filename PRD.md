@@ -159,6 +159,34 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Progression**: View timeline of actions → Filter by type (transactions, AI chats, portfolio changes) → Expand details → Review AI conversation history → See reasoning behind past recommendations
 - **Success criteria**: All actions logged with timestamps, AI interactions show full context, clients can review and learn from history
 
+### AI-Powered Goal Optimization
+- **Functionality**: Generate personalized recommendations to accelerate goal achievement through AI analysis
+- **Purpose**: Help users reach financial goals faster with data-driven optimization strategies
+- **Trigger**: View goal details → Click "Generate AI Optimizations" or auto-generate for struggling goals
+- **Progression**: AI analyzes goal progress, timeline, and contribution rate → Generates 3-5 optimization strategies → Shows current vs suggested approach → Explains potential gains and reasoning → User accepts or dismisses recommendations → Applied optimizations update goal strategy → Track optimization impact over time
+- **Success criteria**: AI provides actionable, specific recommendations with clear reasoning, shows potential financial impact, optimizations feel personalized to user's situation, at least 60% of optimizations are feasible and helpful
+
+### Shared Goal Progress Notifications
+- **Functionality**: Real-time notification system for goal milestones, family contributions, and important updates
+- **Purpose**: Keep users engaged and motivated through timely, relevant updates about their financial progress
+- **Trigger**: Auto-generated when milestone reached, contribution made, optimization available, or priority changes
+- **Progression**: System detects trigger event → Creates notification with context → Shows unread count in notification center → User views notification feed → Can mark individual as read or dismiss all → Click notification for contextual action → Notifications expire after 30 days
+- **Success criteria**: Notifications feel helpful not spammy, clearly communicate what happened and why it matters, actionable notifications link to relevant screens, users can control notification preferences, family members see shared goal updates
+
+### Goal Priority Ranking System
+- **Functionality**: Intelligent ranking of goals to help users focus efforts on what matters most
+- **Purpose**: Reduce decision fatigue by highlighting which goals need attention and which are on track
+- **Trigger**: Navigate to Goals tab → View "Priority Ranking" section
+- **Progression**: Manual: drag goals to reorder priority → Automatic: click "AI Auto-Rank" → AI analyzes urgency (deadline proximity), progress (completion %), goal type (retirement vs vacation), and funding gaps → Assigns priority 1-N with reasoning → Shows why each goal is ranked → User can override rankings → Priority affects dashboard display and recommendations
+- **Success criteria**: Rankings feel logical and defensible, AI explains reasoning clearly, manual override is intuitive, high-priority goals get more prominence in UI, rankings update as circumstances change
+
+### Bank Statement Upload & Analysis
+- **Functionality**: Upload bank statements for AI-powered extraction of financial data and spending insights
+- **Purpose**: Automatically incorporate external financial data to enhance wealth management analysis
+- **Trigger**: Navigate to "Bank Statements" section → Click upload area → Select PDF or image file
+- **Progression**: User uploads statement file (PDF/image, max 10MB) → File uploads with progress indicator → AI processes document → Extracts account details, balances, transactions, categories → Shows processing status → When complete, displays opening/closing balance, total income/expenses → Shows transaction list with auto-categorization → Generates spending breakdown by category with percentages → Insights integrated into overall financial picture → User can view historical statements anytime
+- **Success criteria**: Upload process is smooth and fast, AI accurately extracts key financial data, categorization makes sense (85%+ accuracy), spending breakdown is clear and actionable, extracted data integrates with existing financial view, supports common statement formats
+
 ## Edge Case Handling
 
 - **Insufficient Funds for Investment**: Clear explanation of available cash, suggestion to sell other holdings or add funds, AI explains impact options
