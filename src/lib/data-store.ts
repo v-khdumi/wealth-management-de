@@ -14,6 +14,8 @@ import type {
   AiInteraction,
   Transaction,
   BankStatement,
+  CategoryBudget,
+  SpendingAlert,
 } from './types'
 import {
   SEED_USERS,
@@ -43,6 +45,8 @@ export function useDataStore() {
   const [auditEvents, setAuditEvents] = useKV<AuditEvent[]>('audit_events', [])
   const [aiInteractions, setAiInteractions] = useKV<AiInteraction[]>('ai_interactions', [])
   const [bankStatements, setBankStatements] = useKV<BankStatement[]>('bank_statements', [])
+  const [categoryBudgets, setCategoryBudgets] = useKV<CategoryBudget[]>('category_budgets', [])
+  const [spendingAlerts, setSpendingAlerts] = useKV<SpendingAlert[]>('spending_alerts', [])
 
   return {
     users,
@@ -69,5 +73,9 @@ export function useDataStore() {
     setAiInteractions,
     bankStatements,
     setBankStatements,
+    categoryBudgets,
+    setCategoryBudgets,
+    spendingAlerts,
+    setSpendingAlerts,
   }
 }

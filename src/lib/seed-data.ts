@@ -30,6 +30,8 @@ export const SEED_USERS: User[] = [
   { id: 'cli-10', email: 'barbara.rodriguez@example.com', name: 'Barbara Rodriguez', role: 'CLIENT', advisorId: 'adv-3' },
   { id: 'cli-11', email: 'richard.lee@example.com', name: 'Richard Lee', role: 'CLIENT', advisorId: 'adv-3' },
   { id: 'cli-12', email: 'susan.taylor@example.com', name: 'Susan Taylor', role: 'CLIENT', advisorId: 'adv-3' },
+  
+  { id: 'cli-blank', email: 'blank.persona@example.com', name: 'Test User', role: 'CLIENT', advisorId: 'adv-1' },
 ]
 
 export const SEED_CLIENT_PROFILES: ClientProfile[] = [
@@ -47,6 +49,8 @@ export const SEED_CLIENT_PROFILES: ClientProfile[] = [
   { id: 'cp-10', userId: 'cli-10', advisorId: 'adv-3', dateOfBirth: '1976-10-14', phone: '555-0110', address: '741 Ash Blvd, Atlanta, GA', segment: 'High Net Worth', onboardingDate: '2019-12-03' },
   { id: 'cp-11', userId: 'cli-11', advisorId: 'adv-3', dateOfBirth: '1983-06-21', phone: '555-0111', address: '852 Poplar St, Dallas, TX', segment: 'Mass Affluent', onboardingDate: '2021-05-17' },
   { id: 'cp-12', userId: 'cli-12', advisorId: 'adv-3', dateOfBirth: '1992-01-09', phone: '555-0112', address: '963 Fir Pl, Nashville, TN', segment: 'Emerging Wealth', onboardingDate: '2023-01-10' },
+  
+  { id: 'cp-blank', userId: 'cli-blank', advisorId: 'adv-1', dateOfBirth: '1995-01-01', phone: '555-0000', address: 'Test Address', segment: 'New User', onboardingDate: new Date().toISOString().split('T')[0] },
 ]
 
 export const SEED_RISK_PROFILES: RiskProfile[] = [
@@ -64,6 +68,8 @@ export const SEED_RISK_PROFILES: RiskProfile[] = [
   { id: 'rp-10', clientId: 'cli-10', score: 4, category: 'MODERATE', lastUpdated: '2024-11-28', questionnaireVersion: '2.1' },
   { id: 'rp-11', clientId: 'cli-11', score: 6, category: 'GROWTH', lastUpdated: '2024-10-12', questionnaireVersion: '2.1' },
   { id: 'rp-12', clientId: 'cli-12', score: 10, category: 'AGGRESSIVE', lastUpdated: '2024-12-05', questionnaireVersion: '2.1' },
+  
+  { id: 'rp-blank', clientId: 'cli-blank', score: 5, category: 'BALANCED', lastUpdated: new Date().toISOString(), questionnaireVersion: '2.1' },
 ]
 
 export const SEED_INSTRUMENTS: Instrument[] = [

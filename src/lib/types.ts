@@ -185,6 +185,26 @@ export interface CategorySummary {
   percentage: number
 }
 
+export interface CategoryBudget {
+  category: string
+  monthlyLimit: number
+  alertThreshold: number
+}
+
+export interface SpendingAlert {
+  id: string
+  userId: string
+  category: string
+  currentSpending: number
+  budgetLimit: number
+  threshold: number
+  percentage: number
+  severity: 'WARNING' | 'CRITICAL'
+  statementIds: string[]
+  createdAt: string
+  dismissed: boolean
+}
+
 export interface Goal {
   id: string
   clientId: string

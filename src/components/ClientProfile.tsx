@@ -34,8 +34,11 @@ import { GoalDetailView } from './GoalDetailView'
 import { GoalComparisonView } from './GoalComparisonView'
 import { FamilyBudgetDialog } from './FamilyBudgetDialog'
 import { BankStatementUpload } from './BankStatementUpload'
+import { SpendingAlertsPanel } from './SpendingAlertsPanel'
+import { MultiStatementComparison } from './MultiStatementComparison'
+import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
 import { processBankStatement } from '@/lib/bank-statement-processor'
-import type { Goal, GoalMilestone, GoalType, FamilyMember, BankStatement } from '@/lib/types'
+import type { Goal, GoalMilestone, GoalType, FamilyMember, BankStatement, CategoryBudget, SpendingAlert } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -53,6 +56,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     setGoals,
     bankStatements,
     setBankStatements,
+    categoryBudgets,
+    setCategoryBudgets,
+    spendingAlerts,
+    setSpendingAlerts,
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
@@ -279,7 +286,94 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             : s
         )
       )
+      checkForSpendingAlerts(statement.id)
     }, 2500)
+  }
+
+  const handleSetBudget = (category: string, limit: number, threshold: number) => {
+    const existingBudgetIndex = (categoryBudgets || []).findIndex(b => b.category === category)
+    
+    if (existingBudgetIndex >= 0) {
+      setCategoryBudgets((currentBudgets) =>
+        (currentBudgets || []).map((b, index) =>
+          index === existingBudgetIndex
+            ? { category, monthlyLimit: limit, alertThreshold: threshold }
+            : b
+        )
+      )
+    } else {
+      setCategoryBudgets((currentBudgets) => [
+        ...(currentBudgets || []),
+        { category, monthlyLimit: limit, alertThreshold: threshold }
+      ])
+    }
+  }
+
+  const checkForSpendingAlerts = (statementId: string) => {
+    const statement = (bankStatements || []).find(s => s.id === statementId)
+    if (!statement || !statement.extractedData) return
+
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    const budgets = categoryBudgets || []
+    budgets.forEach((budget: CategoryBudget) => {
+      const currentMonthSpending = (bankStatements || [])
+        .filter(s => {
+          if (!s.extractedData?.statementDate) return false
+          const stmtDate = new Date(s.extractedData.statementDate)
+          return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
+        })
+        .reduce((sum, s) => {
+          const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
+          return sum + categoryAmount
+        }, 0)
+
+      const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
+
+      if (percentage >= budget.alertThreshold) {
+        const existingAlert = (spendingAlerts || []).find(
+          a => a.userId === clientId && a.category === budget.category && !a.dismissed
+        )
+
+        if (!existingAlert) {
+          const alert: SpendingAlert = {
+            id: `alert-${Date.now()}-${budget.category}`,
+            userId: clientId,
+            category: budget.category,
+            currentSpending: currentMonthSpending,
+            budgetLimit: budget.monthlyLimit,
+            threshold: budget.alertThreshold,
+            percentage,
+            severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
+            statementIds: [statementId],
+            createdAt: new Date().toISOString(),
+            dismissed: false
+          }
+
+          setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
+        }
+      }
+    })
+  }
+
+  const handleDismissAlert = (alertId: string) => {
+    setSpendingAlerts((currentAlerts) =>
+      (currentAlerts || []).map(a =>
+        a.id === alertId ? { ...a, dismissed: true } : a
+      )
+    )
+  }
+
+  const handleUpdateGoalFromSpending = (goalId: string, newContribution: number) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map(g =>
+        g.id === goalId
+          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          : g
+      )
+    )
   }
 
   return (
@@ -660,10 +754,30 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="upload" className="mt-6">
+            <TabsContent value="upload" className="mt-6 space-y-6">
               <BankStatementUpload
                 statements={clientStatements}
                 onUpload={handleBankStatementUpload}
+              />
+              
+              {clientStatements.filter(s => s.status === 'COMPLETED').length >= 2 && (
+                <MultiStatementComparison statements={clientStatements} />
+              )}
+              
+              <SpendingAlertsPanel
+                userId={clientId}
+                statements={clientStatements}
+                budgets={categoryBudgets || []}
+                alerts={spendingAlerts || []}
+                onSetBudget={handleSetBudget}
+                onDismissAlert={handleDismissAlert}
+              />
+              
+              <BankStatementGoalIntegration
+                userId={clientId}
+                statements={clientStatements}
+                goals={clientGoals}
+                onUpdateGoal={handleUpdateGoalFromSpending}
               />
             </TabsContent>
 
