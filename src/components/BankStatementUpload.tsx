@@ -1,10 +1,13 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
 import { ScrollArea } from './ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
+import { Switch } from './ui/switch'
+import { Label } from './ui/label'
 import {
   FilePdf,
   UploadSimple,
@@ -21,11 +24,22 @@ import {
   CalendarBlank,
   CreditCard,
   Trash,
+  CurrencyCircleDollar,
+  Funnel,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { BankStatement, BankTransaction, CategorySummary } from '@/lib/types'
 import { formatCurrency } from '@/lib/utils'
+import { 
+  getExchangeRates, 
+  convertCurrency, 
+  formatCurrencyWithCode, 
+  getCurrencySymbol,
+  getCurrencyName,
+  detectUniqueCurrencies,
+  CURRENCY_DATABASE 
+} from '@/lib/currency-utils'
 
 interface BankStatementUploadProps {
   statements: BankStatement[]
@@ -44,20 +58,69 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
   const [aiInsights, setAiInsights] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  const [baseCurrency, setBaseCurrency] = useState<string>('USD')
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
+  const [isLoadingRates, setIsLoadingRates] = useState(false)
+  const [enableCurrencyConversion, setEnableCurrencyConversion] = useState(false)
+  const [currencyFilter, setCurrencyFilter] = useState<string>('ALL')
+  
+  const availableCurrencies = useMemo(() => detectUniqueCurrencies(statements), [statements])
+  
+  useEffect(() => {
+    const loadRates = async () => {
+      setIsLoadingRates(true)
+      try {
+        const rates = await getExchangeRates(baseCurrency)
+        setExchangeRates(rates)
+      } catch (error) {
+        console.error('Failed to load exchange rates:', error)
+      } finally {
+        setIsLoadingRates(false)
+      }
+    }
+    
+    if (enableCurrencyConversion && availableCurrencies.length > 1) {
+      loadRates()
+    }
+  }, [baseCurrency, enableCurrencyConversion, availableCurrencies.length])
 
   const aggregatedData = useMemo(() => {
     if (statements.length === 0) return null
 
-    const completedStatements = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
+    let completedStatements = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
     if (completedStatements.length === 0) return null
+    
+    if (currencyFilter !== 'ALL') {
+      completedStatements = completedStatements.filter(s => s.extractedData?.currency === currencyFilter)
+      if (completedStatements.length === 0) return null
+    }
 
-    const totalIncome = completedStatements.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
-    const totalExpenses = completedStatements.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+    const convert = (amount: number, fromCurrency: string) => {
+      if (!enableCurrencyConversion || Object.keys(exchangeRates).length === 0) {
+        return amount
+      }
+      return convertCurrency(amount, fromCurrency, baseCurrency, exchangeRates)
+    }
+
+    const totalIncome = completedStatements.reduce((sum, s) => {
+      const income = s.extractedData?.totalIncome || 0
+      const currency = s.extractedData?.currency || 'USD'
+      return sum + convert(income, currency)
+    }, 0)
+    
+    const totalExpenses = completedStatements.reduce((sum, s) => {
+      const expenses = s.extractedData?.totalExpenses || 0
+      const currency = s.extractedData?.currency || 'USD'
+      return sum + convert(expenses, currency)
+    }, 0)
 
     const categoryMap = new Map<string, number>()
     completedStatements.forEach(s => {
+      const currency = s.extractedData?.currency || 'USD'
       s.extractedData?.categorySummary?.forEach(cat => {
-        categoryMap.set(cat.category, (categoryMap.get(cat.category) || 0) + cat.amount)
+        const convertedAmount = convert(cat.amount, currency)
+        categoryMap.set(cat.category, (categoryMap.get(cat.category) || 0) + convertedAmount)
       })
     })
 
@@ -65,22 +128,26 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       .map(([category, amount]) => ({
         category,
         amount,
-        percentage: (amount / totalExpenses) * 100
+        percentage: totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0
       }))
       .sort((a, b) => b.amount - a.amount)
 
     const monthlyTrends = completedStatements
-      .map(s => ({
-        month: s.extractedData?.statementDate ? new Date(s.extractedData.statementDate).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : 'N/A',
-        income: s.extractedData?.totalIncome || 0,
-        expenses: s.extractedData?.totalExpenses || 0,
-        net: (s.extractedData?.totalIncome || 0) - (s.extractedData?.totalExpenses || 0)
-      }))
+      .map(s => {
+        const currency = s.extractedData?.currency || 'USD'
+        const income = convert(s.extractedData?.totalIncome || 0, currency)
+        const expenses = convert(s.extractedData?.totalExpenses || 0, currency)
+        return {
+          month: s.extractedData?.statementDate ? new Date(s.extractedData.statementDate).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }) : 'N/A',
+          income,
+          expenses,
+          net: income - expenses
+        }
+      })
       .reverse()
 
-    const firstStatement = completedStatements[0]
-    const currency = firstStatement?.extractedData?.currency || 'USD'
-    const currencySymbol = firstStatement?.extractedData?.currencySymbol || '$'
+    const displayCurrency = enableCurrencyConversion ? baseCurrency : (completedStatements[0]?.extractedData?.currency || 'USD')
+    const displaySymbol = enableCurrencyConversion ? getCurrencySymbol(baseCurrency) : (completedStatements[0]?.extractedData?.currencySymbol || '$')
 
     return {
       totalIncome,
@@ -89,10 +156,10 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       savingsRate: totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0,
       categorySummary,
       monthlyTrends,
-      currency,
-      currencySymbol
+      currency: displayCurrency,
+      currencySymbol: displaySymbol
     }
-  }, [statements])
+  }, [statements, enableCurrencyConversion, baseCurrency, exchangeRates, currencyFilter])
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -333,12 +400,18 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                       >
                         <FilePdf size={24} weight="duotone" className="text-destructive flex-shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h4 className="font-semibold text-sm truncate">{statement.fileName}</h4>
                             <Badge variant="outline" className={getStatusColor(statement.status)}>
                               {getStatusIcon(statement.status)}
                               <span className="ml-1">{statement.status}</span>
                             </Badge>
+                            {statement.extractedData?.currency && (
+                              <Badge variant="secondary" className="gap-1 bg-accent/10 text-accent border-accent/30">
+                                <CurrencyCircleDollar size={12} weight="fill" />
+                                {statement.extractedData.currency}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Uploaded {new Date(statement.uploadedAt).toLocaleDateString()}
@@ -452,6 +525,83 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
             </div>
           </CardHeader>
           <CardContent>
+            {availableCurrencies.length > 1 && (
+              <div className="mb-6 p-4 rounded-lg border bg-muted/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CurrencyCircleDollar size={20} className="text-accent" weight="duotone" />
+                    <h4 className="font-semibold text-sm">Multi-Currency Options</h4>
+                  </div>
+                  <Badge variant="outline" className="gap-1">
+                    {availableCurrencies.length} {availableCurrencies.length === 1 ? 'currency' : 'currencies'} detected
+                  </Badge>
+                </div>
+                
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div className="flex items-center justify-between space-x-2">
+                    <Label htmlFor="currency-conversion" className="text-sm">
+                      Enable Conversion
+                    </Label>
+                    <Switch
+                      id="currency-conversion"
+                      checked={enableCurrencyConversion}
+                      onCheckedChange={setEnableCurrencyConversion}
+                    />
+                  </div>
+                  
+                  {enableCurrencyConversion && (
+                    <div className="space-y-1">
+                      <Label htmlFor="base-currency" className="text-xs text-muted-foreground">
+                        Base Currency
+                      </Label>
+                      <Select value={baseCurrency} onValueChange={setBaseCurrency}>
+                        <SelectTrigger id="base-currency">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(CURRENCY_DATABASE).map(code => (
+                            <SelectItem key={code} value={code}>
+                              {getCurrencySymbol(code)} {code} - {getCurrencyName(code)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-1">
+                    <Label htmlFor="currency-filter" className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Funnel size={12} />
+                      Filter by Currency
+                    </Label>
+                    <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+                      <SelectTrigger id="currency-filter">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">All Currencies</SelectItem>
+                        {availableCurrencies.map(currency => (
+                          <SelectItem key={currency} value={currency}>
+                            {getCurrencySymbol(currency)} {currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                {enableCurrencyConversion && (
+                  <div className="flex items-start gap-2 text-xs text-muted-foreground bg-accent/5 p-2 rounded">
+                    <Info size={14} className="flex-shrink-0 mt-0.5" />
+                    <p>
+                      All amounts are being converted to {baseCurrency} using current exchange rates.
+                      {isLoadingRates && ' Loading latest rates...'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
             <Tabs value={insightsView} onValueChange={(v) => setInsightsView(v as typeof insightsView)}>
               <TabsList className="grid grid-cols-3 w-full mb-6">
                 <TabsTrigger value="overview" className="gap-2">
