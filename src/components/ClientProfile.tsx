@@ -422,6 +422,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
+  const handleDeleteStatement = (statementId: string) => {
+    setBankStatements((currentStatements) =>
+      (currentStatements || []).filter(s => s.id !== statementId)
+    )
+  }
+
   if (!users || !clientProfiles || !riskProfiles || !portfolios) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -525,7 +531,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </TabsList>
 
           <TabsContent value="upload" className="space-y-6">
-            <BankStatementUpload statements={clientStatements} onUpload={handleBankStatementUpload} />
+            <BankStatementUpload 
+              statements={clientStatements} 
+              onUpload={handleBankStatementUpload}
+              onDelete={handleDeleteStatement}
+            />
             
             {clientStatements.length > 0 && (
               <Card>
@@ -984,6 +994,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               <BankStatementUpload
                 statements={clientStatements}
                 onUpload={handleBankStatementUpload}
+                onDelete={handleDeleteStatement}
               />
               
               {clientStatements.filter(s => s.status === 'COMPLETED').length >= 2 && (

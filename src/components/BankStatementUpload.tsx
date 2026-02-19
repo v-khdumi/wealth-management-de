@@ -20,6 +20,7 @@ import {
   ChartLine,
   CalendarBlank,
   CreditCard,
+  Trash,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -29,11 +30,12 @@ interface BankStatementUploadProps {
   statements: BankStatement[]
   onUpload: (file: File) => Promise<void>
   onProcess?: (statementId: string) => Promise<void>
+  onDelete?: (statementId: string) => void
 }
 
 const COLORS = ['oklch(0.45 0.12 155)', 'oklch(0.65 0.15 195)', 'oklch(0.35 0.08 240)', 'oklch(0.70 0.15 75)', 'oklch(0.55 0.15 145)', 'oklch(0.55 0.22 25)', 'oklch(0.60 0.10 300)', 'oklch(0.50 0.08 180)']
 
-export function BankStatementUpload({ statements, onUpload, onProcess }: BankStatementUploadProps) {
+export function BankStatementUpload({ statements, onUpload, onProcess, onDelete }: BankStatementUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedStatement, setSelectedStatement] = useState<BankStatement | null>(null)
@@ -204,6 +206,22 @@ Keep each insight concise (2-3 sentences max).`
     })
   }
 
+  const handleDelete = (statementId: string, fileName: string) => {
+    if (!onDelete) return
+    
+    if (window.confirm(`Are you sure you want to delete "${fileName}"? This action cannot be undone.`)) {
+      onDelete(statementId)
+      
+      if (selectedStatement?.id === statementId) {
+        setSelectedStatement(null)
+      }
+      
+      toast.success('Statement deleted', {
+        description: `${fileName} has been removed`
+      })
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED':
@@ -298,11 +316,13 @@ Keep each insight concise (2-3 sentences max).`
                 {statements.map((statement) => (
                   <div
                     key={statement.id}
-                    className="p-4 rounded-lg border bg-card cursor-pointer hover:bg-accent/5 transition-colors"
-                    onClick={() => setSelectedStatement(statement)}
+                    className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
+                      <div 
+                        className="flex items-start gap-3 flex-1 cursor-pointer"
+                        onClick={() => setSelectedStatement(statement)}
+                      >
                         <FilePdf size={24} weight="duotone" className="text-destructive flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
@@ -358,6 +378,21 @@ Keep each insight concise (2-3 sentences max).`
                           )}
                         </div>
                       </div>
+                      
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDelete(statement.id, statement.fileName)
+                          }}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
+                          title="Delete statement"
+                        >
+                          <Trash size={18} weight="duotone" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
