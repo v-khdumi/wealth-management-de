@@ -1,4 +1,5 @@
 import { useKV } from '@github/spark/hooks'
+import { useMemo } from 'react'
 import type {
   User,
   ClientProfile,
@@ -27,6 +28,8 @@ import {
   generateSeedData,
 } from './seed-data'
 
+const INITIAL_SEED_DATA = generateSeedData()
+
 export function useDataStore() {
   const [users] = useKV<User[]>('users', SEED_USERS)
   const [clientProfiles] = useKV<ClientProfile[]>('client_profiles', SEED_CLIENT_PROFILES)
@@ -35,10 +38,9 @@ export function useDataStore() {
   const [instruments] = useKV<Instrument[]>('instruments', SEED_INSTRUMENTS)
   const [modelPortfolios] = useKV<ModelPortfolio[]>('model_portfolios', SEED_MODEL_PORTFOLIOS)
   
-  const seedData = generateSeedData()
-  const [portfolios, setPortfolios] = useKV<Portfolio[]>('portfolios', seedData.portfolios)
-  const [holdings, setHoldings] = useKV<Holding[]>('holdings', seedData.holdings)
-  const [transactions, setTransactions] = useKV<Transaction[]>('transactions', seedData.transactions)
+  const [portfolios, setPortfolios] = useKV<Portfolio[]>('portfolios', INITIAL_SEED_DATA.portfolios)
+  const [holdings, setHoldings] = useKV<Holding[]>('holdings', INITIAL_SEED_DATA.holdings)
+  const [transactions, setTransactions] = useKV<Transaction[]>('transactions', INITIAL_SEED_DATA.transactions)
   
   const [orders, setOrders] = useKV<Order[]>('orders', [])
   const [nextBestActions, setNextBestActions] = useKV<NextBestAction[]>('next_best_actions', [])

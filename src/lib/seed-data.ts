@@ -179,10 +179,12 @@ function generatePortfolioHoldings(clientId: string, riskScore: number): { portf
                     clientId === 'cli-3' ? 450000 :
                     clientId === 'cli-7' ? 3500000 :
                     clientId === 'cli-10' ? 725000 :
+                    clientId === 'cli-blank' ? 10000 :
                     Math.floor(Math.random() * 800000) + 300000
 
   const cashPercentage = clientId === 'cli-1' ? 0.12 :
                          clientId === 'cli-5' ? 0.15 :
+                         clientId === 'cli-blank' ? 1.0 :
                          0.05
 
   const cash = baseValue * cashPercentage
