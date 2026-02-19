@@ -28,7 +28,7 @@ export async function processBankStatement(
 }
 
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
-  const prompt = window.spark.llmPrompt`You are a financial data extraction AI. Extract the following information from this bank statement:
+  const promptText = `You are a financial data extraction AI. Extract the following information from this bank statement:
   - Account number (last 4 digits)
   - Statement date
   - Opening balance
@@ -62,7 +62,7 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   Since this is a demo, generate realistic sample data for a typical bank statement.`
 
   try {
-    const response = await window.spark.llm(prompt, 'gpt-4o', true)
+    const response = await window.spark.llm(promptText, 'gpt-4o', true)
     const data = JSON.parse(response)
 
     const categorySummary: CategorySummary[] = []

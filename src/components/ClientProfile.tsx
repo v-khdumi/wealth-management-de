@@ -38,7 +38,7 @@ import { SpendingAlertsPanel } from './SpendingAlertsPanel'
 import { MultiStatementComparison } from './MultiStatementComparison'
 import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
 import { processBankStatement } from '@/lib/bank-statement-processor'
-import type { Goal, GoalMilestone, GoalType, FamilyMember, BankStatement, CategoryBudget, SpendingAlert } from '@/lib/types'
+import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -85,6 +85,307 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
   const isBlankUser = clientId === 'cli-blank'
 
+  const age = profile ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0
+  const riskStale = riskProfile ? isRiskProfileStale(riskProfile) : false
+  const totalGoalsProgress = clientGoals.length > 0
+    ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
+    : 0
+
+  const checkMilestones = (goal: Goal) => {
+    const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+    const milestones = [10, 25, 50, 75, 100]
+    
+    const existingMilestones = goal.milestones || []
+    
+    for (const milestone of milestones) {
+      if (progress >= milestone) {
+        const alreadyAchieved = existingMilestones.find(
+          m => m.percentage === milestone && m.achievedAt
+        )
+        
+        if (!alreadyAchieved) {
+          setCelebrationData({
+            goalName: goal.name,
+            percentage: milestone,
+            currentAmount: goal.currentAmount,
+            targetAmount: goal.targetAmount,
+          })
+          
+          setGoals((currentGoals) =>
+            (currentGoals || []).map((g) => {
+              if (g.id === goal.id) {
+                const updatedMilestones: GoalMilestone[] = [
+                  ...(g.milestones || []),
+                  {
+                    id: `milestone-${goal.id}-${milestone}`,
+                    goalId: goal.id,
+                    percentage: milestone,
+                    achievedAt: new Date().toISOString(),
+                    celebrated: true,
+                  },
+                ]
+                return { ...g, milestones: updatedMilestones }
+              }
+              return g
+            })
+          )
+          break
+        }
+      }
+    }
+  }
+
+  const handleSimulateContribution = (goalId: string) => {
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          const newAmount = Math.min(
+            g.currentAmount + g.monthlyContribution * 3,
+            g.targetAmount
+          )
+          let updated = { 
+            ...g, 
+            currentAmount: newAmount,
+            updatedAt: new Date().toISOString() 
+          }
+          updated = addProgressSnapshotToGoal(updated)
+          checkMilestones(updated)
+          return updated
+        }
+        return g
+      })
+      return updatedGoals
+    })
+    
+    toast.success('Progress Updated', {
+      description: 'Simulated 3 months of contributions',
+    })
+  }
+
+  const handleUpdateGoalContribution = (goalId: string, newContribution: number) => {
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          let updated = { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          updated = addProgressSnapshotToGoal(updated)
+          checkMilestones(updated)
+          return updated
+        }
+        return g
+      })
+      return updatedGoals
+    })
+  }
+
+  const handleUpdateGoal = (goalId: string, updates: Partial<Goal>) => {
+    setGoals((currentGoals) => {
+      const updatedGoals = (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          return { ...g, ...updates, updatedAt: new Date().toISOString() }
+        }
+        return g
+      })
+      return updatedGoals
+    })
+  }
+
+  const handleCreateGoalFromTemplate = (template: GoalTemplate, customAmount: number, customYears: number) => {
+    const targetDate = new Date()
+    targetDate.setFullYear(targetDate.getFullYear() + customYears)
+    
+    const monthlyContribution = Math.ceil(customAmount / (customYears * 12))
+    
+    const newGoal: Goal = {
+      id: `goal-${Date.now()}`,
+      clientId: clientId,
+      type: template.type,
+      name: template.name,
+      targetAmount: customAmount,
+      currentAmount: 0,
+      targetDate: targetDate.toISOString(),
+      monthlyContribution: monthlyContribution,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      milestones: [],
+      isCustom: false,
+    }
+    
+    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
+    setShowTemplateDialog(false)
+    
+    toast.success('Goal Created!', {
+      description: `${template.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
+    })
+  }
+
+  const handleCreateCustomGoal = (goalData: {
+    name: string
+    type: GoalType
+    targetAmount: number
+    targetYears: number
+  }) => {
+    const targetDate = new Date()
+    targetDate.setFullYear(targetDate.getFullYear() + goalData.targetYears)
+    
+    const monthlyContribution = Math.ceil(goalData.targetAmount / (goalData.targetYears * 12))
+    
+    const newGoal: Goal = {
+      id: `goal-${Date.now()}`,
+      clientId: clientId,
+      type: goalData.type,
+      name: goalData.name,
+      targetAmount: goalData.targetAmount,
+      currentAmount: 0,
+      targetDate: targetDate.toISOString(),
+      monthlyContribution: monthlyContribution,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      milestones: [],
+      isCustom: true,
+    }
+    
+    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
+    
+    toast.success('Custom Goal Created!', {
+      description: `${goalData.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
+    })
+  }
+
+  const handleSaveFamilyGoal = (goalId: string, isFamilyGoal: boolean, members?: FamilyMember[]) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map((g) => {
+        if (g.id === goalId) {
+          return {
+            ...g,
+            familyGoal: isFamilyGoal
+              ? {
+                  goalId: g.id,
+                  isFamily: true,
+                  members: members || [],
+                  createdBy: clientId,
+                }
+              : undefined,
+            updatedAt: new Date().toISOString(),
+          }
+        }
+        return g
+      })
+    )
+  }
+
+  const checkForSpendingAlerts = (statementId: string) => {
+    const statement = (bankStatements || []).find(s => s.id === statementId)
+    if (!statement || !statement.extractedData) return
+
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    const budgets = categoryBudgets || []
+    budgets.forEach((budget: CategoryBudget) => {
+      const currentMonthSpending = (bankStatements || [])
+        .filter(s => {
+          if (!s.extractedData?.statementDate) return false
+          const stmtDate = new Date(s.extractedData.statementDate)
+          return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
+        })
+        .reduce((sum, s) => {
+          const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
+          return sum + categoryAmount
+        }, 0)
+
+      const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
+
+      if (percentage >= budget.alertThreshold) {
+        const existingAlert = (spendingAlerts || []).find(
+          a => a.userId === clientId && a.category === budget.category && !a.dismissed
+        )
+
+        if (!existingAlert) {
+          const alert: SpendingAlert = {
+            id: `alert-${Date.now()}-${budget.category}`,
+            userId: clientId,
+            category: budget.category,
+            currentSpending: currentMonthSpending,
+            budgetLimit: budget.monthlyLimit,
+            threshold: budget.alertThreshold,
+            percentage,
+            severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
+            statementIds: [statementId],
+            createdAt: new Date().toISOString(),
+            dismissed: false
+          }
+
+          setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
+        }
+      }
+    })
+  }
+
+  const handleBankStatementUpload = async (file: File) => {
+    try {
+      const statement = await processBankStatement(file, clientId)
+      setBankStatements((currentStatements) => [...(currentStatements || []), statement])
+      
+      toast.success('Statement uploaded successfully!', {
+        description: `Processing ${file.name}...`,
+      })
+
+      setTimeout(() => {
+        setBankStatements((currentStatements) =>
+          (currentStatements || []).map((s) =>
+            s.id === statement.id
+              ? { ...s, status: 'COMPLETED' as const, processedAt: new Date().toISOString() }
+              : s
+          )
+        )
+        checkForSpendingAlerts(statement.id)
+      }, 2500)
+    } catch (error) {
+      console.error('Upload error:', error)
+      toast.error('Upload failed', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      })
+    }
+  }
+
+  const handleSetBudget = (category: string, limit: number, threshold: number) => {
+    const existingBudgetIndex = (categoryBudgets || []).findIndex(b => b.category === category)
+    
+    if (existingBudgetIndex >= 0) {
+      setCategoryBudgets((currentBudgets) =>
+        (currentBudgets || []).map((b, index) =>
+          index === existingBudgetIndex
+            ? { category, monthlyLimit: limit, alertThreshold: threshold }
+            : b
+        )
+      )
+    } else {
+      setCategoryBudgets((currentBudgets) => [
+        ...(currentBudgets || []),
+        { category, monthlyLimit: limit, alertThreshold: threshold }
+      ])
+    }
+  }
+
+  const handleDismissAlert = (alertId: string) => {
+    setSpendingAlerts((currentAlerts) =>
+      (currentAlerts || []).map(a =>
+        a.id === alertId ? { ...a, dismissed: true } : a
+      )
+    )
+  }
+
+  const handleUpdateGoalFromSpending = (goalId: string, newContribution: number) => {
+    setGoals((currentGoals) =>
+      (currentGoals || []).map(g =>
+        g.id === goalId
+          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
+          : g
+      )
+    )
+  }
+
   if (!users || !clientProfiles || !riskProfiles || !portfolios) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -108,18 +409,13 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             <h3 className="text-xl font-semibold mb-2">Account not found</h3>
             <p className="text-sm text-muted-foreground">Missing data for: {!client ? 'User' : !profile ? 'Profile' : 'Risk Profile'}</p>
             <p className="text-xs text-muted-foreground mt-2">Client ID: {clientId}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total users loaded: {users?.length || 0} | 
-              Total profiles: {clientProfiles?.length || 0} | 
-              Total risk profiles: {riskProfiles?.length || 0}
-            </p>
           </div>
         </div>
       </div>
     )
   }
 
-  if (!portfolio) {
+  if (!portfolio && !isBlankUser) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
@@ -133,114 +429,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
-  const age = Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
-  const riskStale = isRiskProfileStale(riskProfile)
-  const totalGoalsProgress = clientGoals.length > 0
-    ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
-    : 0
-
   if (isBlankUser) {
-    const handleFileUploadWrapper = async (file: File) => {
-      try {
-        const statement = await processBankStatement(file, clientId)
-        
-        setBankStatements((currentStatements) => [
-          ...(currentStatements || []),
-          statement,
-        ])
-
-        toast.success('Statement uploaded successfully!', {
-          description: `Processing ${file.name}...`,
-        })
-
-        setTimeout(() => {
-          checkForSpendingAlertsWrapper(statement.id)
-        }, 2500)
-      } catch (error) {
-        console.error('Upload error:', error)
-        toast.error('Upload failed', {
-          description: error instanceof Error ? error.message : 'Please try again',
-        })
-      }
-    }
-
-    const handleCreateGoalFromTemplateWrapper = (template: GoalTemplate, customAmount: number, customYears: number) => {
-      const targetDate = new Date()
-      targetDate.setFullYear(targetDate.getFullYear() + customYears)
-      
-      const monthlyContribution = Math.ceil(customAmount / (customYears * 12))
-      
-      const newGoal: Goal = {
-        id: `goal-${Date.now()}`,
-        clientId: clientId,
-        type: template.type,
-        name: template.name,
-        targetAmount: customAmount,
-        currentAmount: 0,
-        targetDate: targetDate.toISOString(),
-        monthlyContribution: monthlyContribution,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        progressHistory: [],
-      }
-      
-      setGoals((currentGoals) => [...(currentGoals || []), newGoal])
-      setShowTemplateDialog(false)
-      
-      toast.success('Goal created!', {
-        description: `${template.name} has been added to your financial plan`,
-      })
-    }
-
-    const checkForSpendingAlertsWrapper = (statementId: string) => {
-      const statement = (bankStatements || []).find(s => s.id === statementId)
-      if (!statement || !statement.extractedData) return
-
-      const now = new Date()
-      const currentMonth = now.getMonth()
-      const currentYear = now.getFullYear()
-      
-      const budgets = categoryBudgets || []
-      budgets.forEach((budget: CategoryBudget) => {
-        const currentMonthSpending = (bankStatements || [])
-          .filter(s => {
-            if (!s.extractedData?.statementDate) return false
-            const stmtDate = new Date(s.extractedData.statementDate)
-            return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
-          })
-          .reduce((sum, s) => {
-            const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
-            return sum + categoryAmount
-          }, 0)
-
-        const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
-
-        if (percentage >= budget.alertThreshold) {
-          const existingAlert = (spendingAlerts || []).find(
-            a => a.userId === clientId && a.category === budget.category && !a.dismissed
-          )
-
-          if (!existingAlert) {
-            const alert: SpendingAlert = {
-              id: `alert-${Date.now()}-${budget.category}`,
-              userId: clientId,
-              category: budget.category,
-              currentSpending: currentMonthSpending,
-              budgetLimit: budget.monthlyLimit,
-              threshold: budget.alertThreshold,
-              percentage,
-              severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
-              statementIds: [statementId],
-              createdAt: new Date().toISOString(),
-              dismissed: false
-            }
-
-            setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
-          }
-        }
-      })
-    }
-
     return (
       <div className="space-y-6">
         <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-transparent">
@@ -285,7 +474,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </TabsList>
 
           <TabsContent value="upload" className="space-y-6">
-            <BankStatementUpload statements={clientStatements} onUpload={handleFileUploadWrapper} />
+            <BankStatementUpload statements={clientStatements} onUpload={handleBankStatementUpload} />
             
             {clientStatements.length > 0 && (
               <Card>
@@ -353,294 +542,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         <GoalTemplateDialog
           open={showTemplateDialog}
           onOpenChange={(open) => setShowTemplateDialog(open)}
-          onSelectTemplate={handleCreateGoalFromTemplateWrapper}
+          onSelectTemplate={handleCreateGoalFromTemplate}
           userAge={age}
           userRiskScore={riskProfile.score}
         />
       </div>
-    )
-  }
-
-  const handleSimulateContribution = (goalId: string) => {
-    setGoals((currentGoals) => {
-      const updatedGoals = (currentGoals || []).map((g) => {
-        if (g.id === goalId) {
-          const newAmount = Math.min(
-            g.currentAmount + g.monthlyContribution * 3,
-            g.targetAmount
-          )
-          let updated = { 
-            ...g, 
-            currentAmount: newAmount,
-            updatedAt: new Date().toISOString() 
-          }
-          updated = addProgressSnapshotToGoal(updated)
-          checkMilestones(updated)
-          return updated
-        }
-        return g
-      })
-      return updatedGoals
-    })
-    
-    toast.success('Progress Updated', {
-      description: 'Simulated 3 months of contributions',
-    })
-  }
-
-  const handleUpdateGoalContribution = (goalId: string, newContribution: number) => {
-    setGoals((currentGoals) => {
-      const updatedGoals = (currentGoals || []).map((g) => {
-        if (g.id === goalId) {
-          let updated = { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
-          updated = addProgressSnapshotToGoal(updated)
-          checkMilestones(updated)
-          return updated
-        }
-        return g
-      })
-      return updatedGoals
-    })
-  }
-
-  const handleUpdateGoal = (goalId: string, updates: Partial<Goal>) => {
-    setGoals((currentGoals) => {
-      const updatedGoals = (currentGoals || []).map((g) => {
-        if (g.id === goalId) {
-          return { ...g, ...updates, updatedAt: new Date().toISOString() }
-        }
-        return g
-      })
-      return updatedGoals
-    })
-  }
-
-  const checkMilestones = (goal: Goal) => {
-    const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
-    const milestones = [10, 25, 50, 75, 100]
-    
-    const existingMilestones = goal.milestones || []
-    
-    for (const milestone of milestones) {
-      if (progress >= milestone) {
-        const alreadyAchieved = existingMilestones.find(
-          m => m.percentage === milestone && m.achievedAt
-        )
-        
-        if (!alreadyAchieved) {
-          setCelebrationData({
-            goalName: goal.name,
-            percentage: milestone,
-            currentAmount: goal.currentAmount,
-            targetAmount: goal.targetAmount,
-          })
-          
-          setGoals((currentGoals) =>
-            (currentGoals || []).map((g) => {
-              if (g.id === goal.id) {
-                const updatedMilestones: GoalMilestone[] = [
-                  ...(g.milestones || []),
-                  {
-                    id: `milestone-${goal.id}-${milestone}`,
-                    goalId: goal.id,
-                    percentage: milestone,
-                    achievedAt: new Date().toISOString(),
-                    celebrated: true,
-                  },
-                ]
-                return { ...g, milestones: updatedMilestones }
-              }
-              return g
-            })
-          )
-          break
-        }
-      }
-    }
-  }
-
-  const handleCreateGoalFromTemplate = (template: GoalTemplate, customAmount: number, customYears: number) => {
-    const targetDate = new Date()
-    targetDate.setFullYear(targetDate.getFullYear() + customYears)
-    
-    const monthlyContribution = Math.ceil(customAmount / (customYears * 12))
-    
-    const newGoal: Goal = {
-      id: `goal-${Date.now()}`,
-      clientId: clientId,
-      type: template.type,
-      name: template.name,
-      targetAmount: customAmount,
-      currentAmount: 0,
-      targetDate: targetDate.toISOString(),
-      monthlyContribution: monthlyContribution,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      milestones: [],
-      isCustom: false,
-    }
-    
-    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
-    
-    toast.success('Goal Created!', {
-      description: `${template.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
-    })
-  }
-
-  const handleCreateCustomGoal = (goalData: {
-    name: string
-    type: GoalType
-    targetAmount: number
-    targetYears: number
-  }) => {
-    const targetDate = new Date()
-    targetDate.setFullYear(targetDate.getFullYear() + goalData.targetYears)
-    
-    const monthlyContribution = Math.ceil(goalData.targetAmount / (goalData.targetYears * 12))
-    
-    const newGoal: Goal = {
-      id: `goal-${Date.now()}`,
-      clientId: clientId,
-      type: goalData.type,
-      name: goalData.name,
-      targetAmount: goalData.targetAmount,
-      currentAmount: 0,
-      targetDate: targetDate.toISOString(),
-      monthlyContribution: monthlyContribution,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      milestones: [],
-      isCustom: true,
-    }
-    
-    setGoals((currentGoals) => [...(currentGoals || []), newGoal])
-    
-    toast.success('Custom Goal Created!', {
-      description: `${goalData.name} goal created with $${monthlyContribution.toLocaleString()}/month contribution`,
-    })
-  }
-
-  const handleSaveFamilyGoal = (goalId: string, isFamilyGoal: boolean, members?: FamilyMember[]) => {
-    setGoals((currentGoals) =>
-      (currentGoals || []).map((g) => {
-        if (g.id === goalId) {
-          return {
-            ...g,
-            familyGoal: isFamilyGoal
-              ? {
-                  goalId: g.id,
-                  isFamily: true,
-                  members: members || [],
-                  createdBy: clientId,
-                }
-              : undefined,
-            updatedAt: new Date().toISOString(),
-          }
-        }
-        return g
-      })
-    )
-  }
-
-  const handleBankStatementUpload = async (file: File) => {
-    const statement = await processBankStatement(file, clientId)
-    setBankStatements((currentStatements) => [...(currentStatements || []), statement])
-    
-    setTimeout(() => {
-      setBankStatements((currentStatements) =>
-        (currentStatements || []).map((s) =>
-          s.id === statement.id
-            ? { ...s, status: 'COMPLETED' as const, processedAt: new Date().toISOString() }
-            : s
-        )
-      )
-      checkForSpendingAlerts(statement.id)
-    }, 2500)
-  }
-
-  const handleSetBudget = (category: string, limit: number, threshold: number) => {
-    const existingBudgetIndex = (categoryBudgets || []).findIndex(b => b.category === category)
-    
-    if (existingBudgetIndex >= 0) {
-      setCategoryBudgets((currentBudgets) =>
-        (currentBudgets || []).map((b, index) =>
-          index === existingBudgetIndex
-            ? { category, monthlyLimit: limit, alertThreshold: threshold }
-            : b
-        )
-      )
-    } else {
-      setCategoryBudgets((currentBudgets) => [
-        ...(currentBudgets || []),
-        { category, monthlyLimit: limit, alertThreshold: threshold }
-      ])
-    }
-  }
-
-  const checkForSpendingAlerts = (statementId: string) => {
-    const statement = (bankStatements || []).find(s => s.id === statementId)
-    if (!statement || !statement.extractedData) return
-
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-    
-    const budgets = categoryBudgets || []
-    budgets.forEach((budget: CategoryBudget) => {
-      const currentMonthSpending = (bankStatements || [])
-        .filter(s => {
-          if (!s.extractedData?.statementDate) return false
-          const stmtDate = new Date(s.extractedData.statementDate)
-          return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
-        })
-        .reduce((sum, s) => {
-          const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
-          return sum + categoryAmount
-        }, 0)
-
-      const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
-
-      if (percentage >= budget.alertThreshold) {
-        const existingAlert = (spendingAlerts || []).find(
-          a => a.userId === clientId && a.category === budget.category && !a.dismissed
-        )
-
-        if (!existingAlert) {
-          const alert: SpendingAlert = {
-            id: `alert-${Date.now()}-${budget.category}`,
-            userId: clientId,
-            category: budget.category,
-            currentSpending: currentMonthSpending,
-            budgetLimit: budget.monthlyLimit,
-            threshold: budget.alertThreshold,
-            percentage,
-            severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
-            statementIds: [statementId],
-            createdAt: new Date().toISOString(),
-            dismissed: false
-          }
-
-          setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
-        }
-      }
-    })
-  }
-
-  const handleDismissAlert = (alertId: string) => {
-    setSpendingAlerts((currentAlerts) =>
-      (currentAlerts || []).map(a =>
-        a.id === alertId ? { ...a, dismissed: true } : a
-      )
-    )
-  }
-
-  const handleUpdateGoalFromSpending = (goalId: string, newContribution: number) => {
-    setGoals((currentGoals) =>
-      (currentGoals || []).map(g =>
-        g.id === goalId
-          ? { ...g, monthlyContribution: newContribution, updatedAt: new Date().toISOString() }
-          : g
-      )
     )
   }
 
@@ -656,7 +562,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-display font-bold text-primary wealth-number">
-              ${portfolio.totalValue.toLocaleString()}
+              ${portfolio?.totalValue.toLocaleString() || '0'}
             </p>
             <div className="flex items-center gap-2 mt-2 text-sm">
               <TrendUp size={16} className="text-success" weight="bold" />
@@ -877,7 +783,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6">{clientGoals.length === 0 ? (
+                <CardContent className="space-y-6">
+                  {clientGoals.length === 0 ? (
                     <div className="text-center py-12">
                       <Target size={48} className="mx-auto mb-4 text-muted-foreground/30" weight="duotone" />
                       <p className="text-muted-foreground font-medium mb-2">No goals set yet</p>

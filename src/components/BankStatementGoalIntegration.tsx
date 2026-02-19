@@ -107,7 +107,7 @@ export function BankStatementGoalIntegration({
       const totalExpenses = completedStatements.reduce((sum, s) => 
         sum + (s.extractedData?.totalExpenses || 0), 0) / completedStatements.length
 
-      const prompt = spark.llmPrompt`You are a financial advisor analyzing spending patterns and goals.
+      const promptText = `You are a financial advisor analyzing spending patterns and goals.
 
 User's Financial Data:
 - Average Monthly Income: $${totalIncome.toFixed(0)}
@@ -122,7 +122,7 @@ ${goalsNeedingAttention.map(g => `- ${g.name}: $${g.currentAmount.toLocaleString
 
 Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes.`
 
-      const response = await spark.llm(prompt, 'gpt-4o-mini')
+      const response = await window.spark.llm(promptText, 'gpt-4o-mini')
       setAiInsights(response)
       
       toast.success('AI insights generated', {

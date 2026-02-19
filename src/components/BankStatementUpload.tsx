@@ -142,7 +142,7 @@ export function BankStatementUpload({ statements, onUpload, onProcess }: BankSta
 
     setIsGeneratingInsights(true)
     try {
-      const prompt = window.spark.llmPrompt`You are a financial advisor analyzing bank statement data. Based on the following spending data, provide 3-5 actionable insights and recommendations:
+      const promptText = `You are a financial advisor analyzing bank statement data. Based on the following spending data, provide 3-5 actionable insights and recommendations:
 
 Total Income: $${aggregatedData.totalIncome}
 Total Expenses: $${aggregatedData.totalExpenses}
@@ -160,7 +160,7 @@ Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 
 Keep each insight concise (2-3 sentences max).`
 
-      const response = await window.spark.llm(prompt, 'gpt-4o-mini')
+      const response = await window.spark.llm(promptText, 'gpt-4o-mini')
       setAiInsights(response)
       toast.success('Insights generated successfully')
     } catch (error) {
