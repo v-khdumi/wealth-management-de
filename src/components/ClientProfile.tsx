@@ -41,6 +41,9 @@ import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
 import { MultiCurrencyPortfolio } from './MultiCurrencyPortfolio'
 import { RegionalBudgets } from './RegionalBudgets'
 import { MultiCurrencySpendingComparison } from './MultiCurrencySpendingComparison'
+import { CurrencySpendingTrends } from './CurrencySpendingTrends'
+import { GoalTrackingFromStatements } from './GoalTrackingFromStatements'
+import { MultiCurrencyReportExport } from './MultiCurrencyReportExport'
 import { processBankStatement, extractBankStatementData } from '@/lib/bank-statement-processor'
 import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert, RegionalBudget } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
@@ -1190,6 +1193,26 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                 onUpload={handleBankStatementUpload}
                 onDelete={handleDeleteStatement}
               />
+              
+              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+                <CurrencySpendingTrends statements={clientStatements} />
+              )}
+              
+              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+                <GoalTrackingFromStatements
+                  statements={clientStatements}
+                  goals={clientGoals}
+                  onUpdateGoal={handleUpdateGoalFromSpending}
+                  onCreateGoal={() => setShowTemplateDialog(true)}
+                />
+              )}
+              
+              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+                <MultiCurrencyReportExport
+                  statements={clientStatements}
+                  goals={clientGoals}
+                />
+              )}
               
               {clientStatements.filter(s => s.status === 'COMPLETED').length >= 2 && (
                 <MultiStatementComparison statements={clientStatements} />

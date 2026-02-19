@@ -148,6 +148,27 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 ### Collaborative Family Budgeting
 - **Functionality**: Create shared family budget goals where multiple family members can contribute and track progress together
 - **Purpose**: Enable transparent financial planning for household expenses and shared goals
+
+### Currency-Specific Spending Insights & Trends
+- **Functionality**: Analyze spending patterns broken down by currency with historical trends, category breakdown, and multi-currency comparison
+- **Purpose**: Provide users with multi-currency portfolios clear visibility into their regional spending habits and patterns
+- **Trigger**: Navigate to Upload tab → View Currency Spending Trends section (appears when statements are processed)
+- **Progression**: Select currency filter (All/specific currency) → Choose time range (3M/6M/12M/All) → View summary metrics (income, expenses, savings rate) → Explore monthly trends chart → Review category spending breakdown → Compare currencies side-by-side → Export detailed CSV report
+- **Success criteria**: Each currency tracked separately with native symbols and formatting, trends show acceleration or deceleration in spending, category breakdowns reveal spending patterns, export includes comprehensive multi-currency data, insights respect original statement currencies without forced conversion
+
+### Goal Tracking Based on Bank Statement Data
+- **Functionality**: Smart goal recommendations based on actual spending patterns from uploaded bank statements
+- **Purpose**: Connect real-world spending behavior to goal progress and provide data-driven contribution recommendations
+- **Trigger**: Navigate to Upload tab → View Goal Tracking section (appears when both statements and goals exist)
+- **Progression**: System analyzes monthly spending patterns → Calculates available savings from statements → Compares to goal requirements → Generates status (on-track/at-risk/ahead) → Shows affordability metrics → Identifies spending optimization opportunities → Recommends specific category reductions → User can apply recommended contribution increases
+- **Success criteria**: Recommendations use actual spending data not assumptions, optimization opportunities highlight realistic 15% reduction targets in top categories, affordability calculations show if surplus covers shortfall, one-click updates to apply recommended contributions, warnings when goals need attention, positive reinforcement for goals ahead of schedule
+
+### Multi-Currency Report Export
+- **Functionality**: Export comprehensive financial reports in CSV or JSON format with multi-currency support
+- **Purpose**: Enable users to analyze their complete financial picture in external tools or share with advisors
+- **Trigger**: Navigate to Upload tab → View Multi-Currency Report Export section (appears when statements are processed)
+- **Progression**: Select export format (CSV/JSON) → Choose report sections (Executive Summary, Currency Breakdown, Category Spending, Transactions, Goals) → Preview what will be included → Click Export → Download file with timestamp
+- **Success criteria**: CSV format is spreadsheet-ready with clear headers, JSON format is properly structured for programmatic use, multi-currency data maintains separate tracking per currency, all transactions include currency codes and symbols, goals section includes progress metrics, exports include metadata (generation time, currencies, statement count), file naming includes timestamp for version control
 - **Trigger**: Create new goal → Toggle "Make this a family goal" → Invite family members
 - **Progression**: Create family goal (vacation, home purchase, education) → Set total target → Invite family members via email → Each member pledges monthly contribution → View combined progress → Track individual contributions → See who's on track → Celebrate milestones together → Receive notifications when contributions are made
 - **Success criteria**: Clear visualization of each person's contribution, total progress shows combined effort, members can adjust their pledges, notifications keep everyone engaged, demo mode allows simulating multiple contributors
