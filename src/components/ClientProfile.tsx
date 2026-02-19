@@ -63,20 +63,6 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
-  
-  if (!users || !clientProfiles || !riskProfiles || !portfolios) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center space-y-4">
-          <div className="text-6xl">⏳</div>
-          <div>
-            <h3 className="text-xl font-semibold mb-2">Loading...</h3>
-            <p className="text-sm text-muted-foreground">Initializing your account data</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
   const [selectedGoalForFamily, setSelectedGoalForFamily] = useState<Goal | null>(null)
@@ -99,6 +85,20 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
   const isBlankUser = clientId === 'cli-blank'
 
+  if (!users || !clientProfiles || !riskProfiles || !portfolios) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">⏳</div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Loading...</h3>
+            <p className="text-sm text-muted-foreground">Initializing your account data</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (!client || !profile || !riskProfile) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -107,6 +107,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           <div>
             <h3 className="text-xl font-semibold mb-2">Account not found</h3>
             <p className="text-sm text-muted-foreground">Missing data for: {!client ? 'User' : !profile ? 'Profile' : 'Risk Profile'}</p>
+            <p className="text-xs text-muted-foreground mt-2">Client ID: {clientId}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total users loaded: {users?.length || 0} | 
+              Total profiles: {clientProfiles?.length || 0} | 
+              Total risk profiles: {riskProfiles?.length || 0}
+            </p>
           </div>
         </div>
       </div>

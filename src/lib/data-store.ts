@@ -1,5 +1,5 @@
 import { useKV } from '@github/spark/hooks'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import type {
   User,
   ClientProfile,
@@ -29,10 +29,12 @@ import {
 } from './seed-data'
 
 const INITIAL_SEED_DATA = generateSeedData()
+const DATA_VERSION = '1.1'
 
 export function useDataStore() {
-  const [users] = useKV<User[]>('users', SEED_USERS)
-  const [clientProfiles] = useKV<ClientProfile[]>('client_profiles', SEED_CLIENT_PROFILES)
+  const [dataVersion, setDataVersion] = useKV<string>('data_version', DATA_VERSION)
+  const [users, setUsers] = useKV<User[]>('users', SEED_USERS)
+  const [clientProfiles, setClientProfiles] = useKV<ClientProfile[]>('client_profiles', SEED_CLIENT_PROFILES)
   const [riskProfiles, setRiskProfiles] = useKV<RiskProfile[]>('risk_profiles', SEED_RISK_PROFILES)
   const [goals, setGoals] = useKV<Goal[]>('goals', SEED_GOALS)
   const [instruments] = useKV<Instrument[]>('instruments', SEED_INSTRUMENTS)
@@ -41,6 +43,36 @@ export function useDataStore() {
   const [portfolios, setPortfolios] = useKV<Portfolio[]>('portfolios', INITIAL_SEED_DATA.portfolios)
   const [holdings, setHoldings] = useKV<Holding[]>('holdings', INITIAL_SEED_DATA.holdings)
   const [transactions, setTransactions] = useKV<Transaction[]>('transactions', INITIAL_SEED_DATA.transactions)
+  
+  useEffect(() => {
+    if (dataVersion !== DATA_VERSION) {
+      const needsBlankUser = !(users || []).some(u => u.id === 'cli-blank')
+      
+      if (needsBlankUser) {
+        const blankUser = SEED_USERS.find(u => u.id === 'cli-blank')
+        const blankProfile = SEED_CLIENT_PROFILES.find(cp => cp.userId === 'cli-blank')
+        const blankRiskProfile = SEED_RISK_PROFILES.find(rp => rp.clientId === 'cli-blank')
+        
+        if (blankUser) {
+          setUsers((current) => [...(current || []), blankUser])
+        }
+        if (blankProfile) {
+          setClientProfiles((current) => [...(current || []), blankProfile])
+        }
+        if (blankRiskProfile) {
+          setRiskProfiles((current) => [...(current || []), blankRiskProfile])
+        }
+        
+        const seedData = generateSeedData()
+        const blankPortfolio = seedData.portfolios.find(p => p.clientId === 'cli-blank')
+        if (blankPortfolio) {
+          setPortfolios((current) => [...(current || []), blankPortfolio])
+        }
+      }
+      
+      setDataVersion(DATA_VERSION)
+    }
+  }, [dataVersion, users, setDataVersion, setUsers, setClientProfiles, setRiskProfiles, setPortfolios])
   
   const [orders, setOrders] = useKV<Order[]>('orders', [])
   const [nextBestActions, setNextBestActions] = useKV<NextBestAction[]>('next_best_actions', [])
