@@ -146,8 +146,22 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       })
       .reverse()
 
-    const displayCurrency = enableCurrencyConversion ? baseCurrency : (completedStatements[0]?.extractedData?.currency || 'USD')
-    const displaySymbol = enableCurrencyConversion ? getCurrencySymbol(baseCurrency) : (completedStatements[0]?.extractedData?.currencySymbol || '$')
+    let displayCurrency: string
+    let displaySymbol: string
+    
+    if (enableCurrencyConversion) {
+      displayCurrency = baseCurrency
+      displaySymbol = getCurrencySymbol(baseCurrency)
+    } else if (currencyFilter !== 'ALL') {
+      displayCurrency = currencyFilter
+      displaySymbol = getCurrencySymbol(currencyFilter)
+    } else if (availableCurrencies.length === 1) {
+      displayCurrency = availableCurrencies[0]
+      displaySymbol = getCurrencySymbol(availableCurrencies[0])
+    } else {
+      displayCurrency = completedStatements[0]?.extractedData?.currency || 'USD'
+      displaySymbol = completedStatements[0]?.extractedData?.currencySymbol || getCurrencySymbol(displayCurrency)
+    }
 
     return {
       totalIncome,

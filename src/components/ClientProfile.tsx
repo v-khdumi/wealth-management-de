@@ -520,6 +520,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
+  const [blankUserTab, setBlankUserTab] = useState<'upload' | 'portfolio' | 'goals'>('upload')
+
   if (isBlankUser) {
     return (
       <div className="space-y-6">
@@ -548,17 +550,17 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardContent>
         </Card>
 
-        <Tabs value="upload" className="space-y-6">
+        <Tabs value={blankUserTab} onValueChange={(v) => setBlankUserTab(v as typeof blankUserTab)} className="space-y-6">
           <TabsList className="grid grid-cols-3 w-full max-w-md">
             <TabsTrigger value="upload" className="gap-2">
               <UploadSimple size={16} />
               Upload Statements
             </TabsTrigger>
-            <TabsTrigger value="portfolio" disabled className="gap-2">
+            <TabsTrigger value="portfolio" className="gap-2">
               <ChartLine size={16} />
               Portfolio
             </TabsTrigger>
-            <TabsTrigger value="goals" disabled className="gap-2">
+            <TabsTrigger value="goals" className="gap-2">
               <Target size={16} />
               Goals
             </TabsTrigger>
@@ -632,6 +634,121 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               </Card>
             )}
           </TabsContent>
+
+          <TabsContent value="portfolio" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ChartLine size={24} />
+                  Portfolio Overview
+                </CardTitle>
+                <CardDescription>
+                  Track your investment portfolio and asset allocation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-12">
+                <div className="text-6xl mb-4">📊</div>
+                <h3 className="text-xl font-semibold mb-2">Portfolio Coming Soon</h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  Once you have uploaded bank statements and created goals, you can track your portfolio and investments here.
+                </p>
+                <Button variant="outline" onClick={() => setBlankUserTab('upload')}>
+                  Back to Upload
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="goals" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target size={24} />
+                      Financial Goals
+                    </CardTitle>
+                    <CardDescription>
+                      Set and track your financial goals
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
+                    <Target size={16} weight="bold" />
+                    Add Goal
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {clientGoals.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Target size={48} className="mx-auto mb-4 text-muted-foreground/30" weight="duotone" />
+                    <p className="text-muted-foreground font-medium mb-2">No goals set yet</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Start planning for retirement, a home, education, or other dreams
+                    </p>
+                    <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
+                      <Target size={16} weight="bold" />
+                      Create Your First Goal
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {clientGoals.map(goal => {
+                      const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
+                      const gap = calculateGoalGap(goal)
+                      
+                      return (
+                        <div key={goal.id} className="p-6 border-2 rounded-xl space-y-4">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-bold text-xl">{goal.name}</p>
+                              <Badge variant="secondary">{goal.type === 'LIFE_EVENT' ? 'Life Event' : goal.type}</Badge>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedGoalForAdjustment(goal)}
+                              className="gap-2"
+                            >
+                              <PencilSimple size={16} />
+                              Adjust
+                            </Button>
+                          </div>
+                          
+                          <div>
+                            <div className="flex justify-between text-sm mb-2">
+                              <span className="font-medium">Progress</span>
+                              <span className="font-bold text-primary">{progress.toFixed(1)}%</span>
+                            </div>
+                            <Progress value={progress} className="h-3" />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
+                            <div>
+                              <p className="text-muted-foreground mb-1">Current Savings</p>
+                              <p className="font-semibold text-lg">${goal.currentAmount.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Still Needed</p>
+                              <p className="font-semibold text-lg text-warning">${gap.toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Target Date</p>
+                              <p className="font-semibold">{new Date(goal.targetDate).toLocaleDateString()}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground mb-1">Monthly Saving</p>
+                              <p className="font-semibold">${goal.monthlyContribution.toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
 
         <GoalTemplateDialog
@@ -641,6 +758,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           userAge={age}
           userRiskScore={riskProfile?.score || 5}
         />
+        
+        {selectedGoalForAdjustment && (
+          <GoalAdjustmentDialog
+            goal={selectedGoalForAdjustment}
+            open={!!selectedGoalForAdjustment}
+            onOpenChange={(open) => !open && setSelectedGoalForAdjustment(null)}
+            onSave={handleUpdateGoalContribution}
+          />
+        )}
       </div>
     )
   }
