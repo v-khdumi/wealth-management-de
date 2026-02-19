@@ -36,6 +36,8 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   - All transactions with date, description, amount, and type (CREDIT or DEBIT)
   - Categorize each transaction
   - Calculate total income and expenses
+  - IMPORTANT: Detect the currency used in the document (e.g., USD, EUR, RON, GBP, etc.)
+  - Extract the currency symbol used (e.g., $, €, lei, £, etc.)
   
   Return the data in JSON format matching this structure:
   {
@@ -45,6 +47,8 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
     "closingBalance": number,
     "totalIncome": number,
     "totalExpenses": number,
+    "currency": "string (ISO 4217 code like USD, EUR, RON, GBP, etc.)",
+    "currencySymbol": "string (the actual symbol used: $, €, lei, £, etc.)",
     "transactions": [
       {
         "id": "string",
@@ -58,6 +62,8 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   }
   
   Use realistic categories like: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, etc.
+  
+  CRITICAL: Always detect and extract the currency from the bank statement. Look for currency symbols, ISO codes, or currency names in the document.
   
   Since this is a demo, generate realistic sample data for a typical bank statement.`
 
@@ -99,6 +105,8 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
       totalExpenses: data.totalExpenses,
       transactions: data.transactions,
       categorySummary,
+      currency: data.currency || 'USD',
+      currencySymbol: data.currencySymbol || '$',
     }
   } catch (error) {
     return generateMockStatementData()
@@ -243,5 +251,7 @@ function generateMockStatementData(): BankStatement['extractedData'] {
     totalExpenses,
     transactions,
     categorySummary,
+    currency: 'USD',
+    currencySymbol: '$',
   }
 }

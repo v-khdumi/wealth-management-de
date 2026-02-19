@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { BankStatement, BankTransaction, CategorySummary } from '@/lib/types'
+import { formatCurrency } from '@/lib/utils'
 
 interface BankStatementUploadProps {
   statements: BankStatement[]
@@ -77,13 +78,19 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       }))
       .reverse()
 
+    const firstStatement = completedStatements[0]
+    const currency = firstStatement?.extractedData?.currency || 'USD'
+    const currencySymbol = firstStatement?.extractedData?.currencySymbol || '$'
+
     return {
       totalIncome,
       totalExpenses,
       netSavings: totalIncome - totalExpenses,
       savingsRate: totalIncome > 0 ? ((totalIncome - totalExpenses) / totalIncome) * 100 : 0,
       categorySummary,
-      monthlyTrends
+      monthlyTrends,
+      currency,
+      currencySymbol
     }
   }, [statements])
 
@@ -144,15 +151,16 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
 
     setIsGeneratingInsights(true)
     try {
-      const promptText = `You are a financial advisor analyzing bank statement data. Based on the following spending data, provide 3-5 actionable insights and recommendations:
+      const currencyDisplay = aggregatedData.currencySymbol || aggregatedData.currency || '$'
+      const promptText = `You are a financial advisor analyzing bank statement data. The amounts are in ${aggregatedData.currency || 'USD'}. Based on the following spending data, provide 3-5 actionable insights and recommendations:
 
-Total Income: $${aggregatedData.totalIncome}
-Total Expenses: $${aggregatedData.totalExpenses}
-Net Savings: $${aggregatedData.netSavings}
+Total Income: ${currencyDisplay}${aggregatedData.totalIncome}
+Total Expenses: ${currencyDisplay}${aggregatedData.totalExpenses}
+Net Savings: ${currencyDisplay}${aggregatedData.netSavings}
 Savings Rate: ${aggregatedData.savingsRate.toFixed(1)}%
 
 Top Spending Categories:
-${aggregatedData.categorySummary.slice(0, 5).map(c => `- ${c.category}: $${c.amount.toFixed(2)} (${c.percentage.toFixed(1)}%)`).join('\n')}
+${aggregatedData.categorySummary.slice(0, 5).map(c => `- ${c.category}: ${currencyDisplay}${c.amount.toFixed(2)} (${c.percentage.toFixed(1)}%)`).join('\n')}
 
 Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 1. Spending patterns and areas of concern
@@ -160,7 +168,7 @@ Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 3. Budget optimization suggestions
 4. Positive behaviors to reinforce
 
-Keep each insight concise (2-3 sentences max).`
+Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts.`
 
       const response = await window.spark.llm(promptText, 'gpt-4o-mini')
       setAiInsights(response)
@@ -341,13 +349,21 @@ Keep each insight concise (2-3 sentences max).`
                               <div className="p-2 rounded bg-muted/50 text-xs">
                                 <p className="text-muted-foreground mb-0.5">Opening Balance</p>
                                 <p className="font-semibold">
-                                  ${statement.extractedData.openingBalance?.toLocaleString() ?? '0'}
+                                  {formatCurrency(
+                                    statement.extractedData.openingBalance ?? 0,
+                                    statement.extractedData.currencySymbol,
+                                    statement.extractedData.currency
+                                  )}
                                 </p>
                               </div>
                               <div className="p-2 rounded bg-muted/50 text-xs">
                                 <p className="text-muted-foreground mb-0.5">Closing Balance</p>
                                 <p className="font-semibold">
-                                  ${statement.extractedData.closingBalance?.toLocaleString() ?? '0'}
+                                  {formatCurrency(
+                                    statement.extractedData.closingBalance ?? 0,
+                                    statement.extractedData.currencySymbol,
+                                    statement.extractedData.currency
+                                  )}
                                 </p>
                               </div>
                               <div className="p-2 rounded bg-success/10 text-xs">
@@ -356,7 +372,11 @@ Keep each insight concise (2-3 sentences max).`
                                   Income
                                 </p>
                                 <p className="font-semibold text-success">
-                                  ${statement.extractedData.totalIncome?.toLocaleString() ?? '0'}
+                                  {formatCurrency(
+                                    statement.extractedData.totalIncome ?? 0,
+                                    statement.extractedData.currencySymbol,
+                                    statement.extractedData.currency
+                                  )}
                                 </p>
                               </div>
                               <div className="p-2 rounded bg-destructive/10 text-xs">
@@ -365,7 +385,11 @@ Keep each insight concise (2-3 sentences max).`
                                   Expenses
                                 </p>
                                 <p className="font-semibold text-destructive">
-                                  ${statement.extractedData.totalExpenses?.toLocaleString() ?? '0'}
+                                  {formatCurrency(
+                                    statement.extractedData.totalExpenses ?? 0,
+                                    statement.extractedData.currencySymbol,
+                                    statement.extractedData.currency
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -453,7 +477,7 @@ Keep each insight concise (2-3 sentences max).`
                         Total Income
                       </div>
                       <p className="text-2xl font-display font-bold text-success">
-                        ${aggregatedData.totalIncome.toLocaleString()}
+                        {formatCurrency(aggregatedData.totalIncome, aggregatedData.currencySymbol, aggregatedData.currency)}
                       </p>
                     </CardContent>
                   </Card>
@@ -464,7 +488,7 @@ Keep each insight concise (2-3 sentences max).`
                         Total Expenses
                       </div>
                       <p className="text-2xl font-display font-bold text-destructive">
-                        ${aggregatedData.totalExpenses.toLocaleString()}
+                        {formatCurrency(aggregatedData.totalExpenses, aggregatedData.currencySymbol, aggregatedData.currency)}
                       </p>
                     </CardContent>
                   </Card>
@@ -472,7 +496,7 @@ Keep each insight concise (2-3 sentences max).`
                     <CardContent className="pt-6">
                       <div className="text-sm text-muted-foreground mb-1">Net Savings</div>
                       <p className="text-2xl font-display font-bold text-primary">
-                        ${aggregatedData.netSavings.toLocaleString()}
+                        {formatCurrency(aggregatedData.netSavings, aggregatedData.currencySymbol, aggregatedData.currency)}
                       </p>
                     </CardContent>
                   </Card>
@@ -654,11 +678,11 @@ Keep each insight concise (2-3 sentences max).`
                               </div>
                               <div className="text-right">
                                 <p className={`font-semibold ${tx.type === 'CREDIT' ? 'text-success' : 'text-foreground'}`}>
-                                  {tx.type === 'CREDIT' ? '+' : '-'}${tx.amount.toLocaleString()}
+                                  {tx.type === 'CREDIT' ? '+' : '-'}{formatCurrency(tx.amount, selectedStatement.extractedData?.currencySymbol, selectedStatement.extractedData?.currency)}
                                 </p>
                                 {tx.balance !== undefined && (
                                   <p className="text-xs text-muted-foreground">
-                                    Balance: ${tx.balance.toLocaleString()}
+                                    Balance: {formatCurrency(tx.balance, selectedStatement.extractedData?.currencySymbol, selectedStatement.extractedData?.currency)}
                                   </p>
                                 )}
                               </div>

@@ -164,6 +164,8 @@ export interface BankStatement {
     totalExpenses?: number
     transactions?: BankTransaction[]
     categorySummary?: CategorySummary[]
+    currency?: string
+    currencySymbol?: string
   }
   errorMessage?: string
 }
