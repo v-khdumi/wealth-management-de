@@ -29,7 +29,7 @@ import {
 } from './seed-data'
 
 const INITIAL_SEED_DATA = generateSeedData()
-const DATA_VERSION = '1.1'
+const DATA_VERSION = '1.2'
 
 export function useDataStore() {
   const [dataVersion, setDataVersion] = useKV<string>('data_version', DATA_VERSION)
@@ -46,33 +46,19 @@ export function useDataStore() {
   
   useEffect(() => {
     if (dataVersion !== DATA_VERSION) {
-      const needsBlankUser = !(users || []).some(u => u.id === 'cli-blank')
+      setUsers(SEED_USERS)
+      setClientProfiles(SEED_CLIENT_PROFILES)
+      setRiskProfiles(SEED_RISK_PROFILES)
+      setGoals(SEED_GOALS)
       
-      if (needsBlankUser) {
-        const blankUser = SEED_USERS.find(u => u.id === 'cli-blank')
-        const blankProfile = SEED_CLIENT_PROFILES.find(cp => cp.userId === 'cli-blank')
-        const blankRiskProfile = SEED_RISK_PROFILES.find(rp => rp.clientId === 'cli-blank')
-        
-        if (blankUser) {
-          setUsers((current) => [...(current || []), blankUser])
-        }
-        if (blankProfile) {
-          setClientProfiles((current) => [...(current || []), blankProfile])
-        }
-        if (blankRiskProfile) {
-          setRiskProfiles((current) => [...(current || []), blankRiskProfile])
-        }
-        
-        const seedData = generateSeedData()
-        const blankPortfolio = seedData.portfolios.find(p => p.clientId === 'cli-blank')
-        if (blankPortfolio) {
-          setPortfolios((current) => [...(current || []), blankPortfolio])
-        }
-      }
+      const freshSeedData = generateSeedData()
+      setPortfolios(freshSeedData.portfolios)
+      setHoldings(freshSeedData.holdings)
+      setTransactions(freshSeedData.transactions)
       
       setDataVersion(DATA_VERSION)
     }
-  }, [dataVersion, users, setDataVersion, setUsers, setClientProfiles, setRiskProfiles, setPortfolios])
+  }, [dataVersion, setDataVersion, setUsers, setClientProfiles, setRiskProfiles, setGoals, setPortfolios, setHoldings, setTransactions])
   
   const [orders, setOrders] = useKV<Order[]>('orders', [])
   const [nextBestActions, setNextBestActions] = useKV<NextBestAction[]>('next_best_actions', [])

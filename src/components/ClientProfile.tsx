@@ -76,14 +76,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     targetAmount: number
   } | null>(null)
 
+  const isBlankUser = clientId === 'cli-blank'
+
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
   const riskProfile = useMemo(() => (riskProfiles || []).find(rp => rp.clientId === clientId), [riskProfiles, clientId])
   const clientGoals = useMemo(() => (goals || []).filter(g => g.clientId === clientId), [goals, clientId])
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
-
-  const isBlankUser = clientId === 'cli-blank'
 
   const age = profile ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0
   const riskStale = riskProfile ? isRiskProfileStale(riskProfile) : false
