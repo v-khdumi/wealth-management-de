@@ -33,40 +33,70 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   let detectedCurrency = 'USD'
   let detectedSymbol = '$'
   
-  if (fileName.includes('ron') || fileName.includes('romania') || fileName.includes('lei')) {
+  if (fileName.includes('ron') || fileName.includes('romania') || fileName.includes('lei') || fileName.includes('leu')) {
     detectedCurrency = 'RON'
     detectedSymbol = 'lei'
   } else if (fileName.includes('eur') || fileName.includes('euro')) {
     detectedCurrency = 'EUR'
     detectedSymbol = '€'
-  } else if (fileName.includes('gbp') || fileName.includes('pound')) {
+  } else if (fileName.includes('gbp') || fileName.includes('pound') || fileName.includes('sterling')) {
     detectedCurrency = 'GBP'
     detectedSymbol = '£'
+  } else if (fileName.includes('jpy') || fileName.includes('yen')) {
+    detectedCurrency = 'JPY'
+    detectedSymbol = '¥'
+  } else if (fileName.includes('chf') || fileName.includes('swiss')) {
+    detectedCurrency = 'CHF'
+    detectedSymbol = 'CHF'
+  } else if (fileName.includes('cad') || fileName.includes('canadian')) {
+    detectedCurrency = 'CAD'
+    detectedSymbol = 'CA$'
+  } else if (fileName.includes('aud') || fileName.includes('australian')) {
+    detectedCurrency = 'AUD'
+    detectedSymbol = 'A$'
+  } else if (fileName.includes('pln') || fileName.includes('poland') || fileName.includes('zloty')) {
+    detectedCurrency = 'PLN'
+    detectedSymbol = 'zł'
+  } else if (fileName.includes('czk') || fileName.includes('czech') || fileName.includes('koruna')) {
+    detectedCurrency = 'CZK'
+    detectedSymbol = 'Kč'
+  } else if (fileName.includes('huf') || fileName.includes('hungary') || fileName.includes('forint')) {
+    detectedCurrency = 'HUF'
+    detectedSymbol = 'Ft'
   }
 
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
 
-CRITICAL INSTRUCTIONS FOR CURRENCY DETECTION:
-1. First, analyze the filename for currency hints (RON, EUR, USD, GBP, etc.)
-2. Look for currency symbols in the document (lei, €, $, £, etc.)
-3. Check for ISO currency codes (RON, EUR, USD, GBP, etc.)
-4. If the filename contains "RON" or "lei" or "romania", the currency MUST be RON with symbol "lei"
-5. If the filename contains "EUR" or "euro", the currency MUST be EUR with symbol "€"
-6. Default to the detected currency from the filename if present: ${detectedCurrency}
+⚠️ CRITICAL: CURRENCY DETECTION REQUIREMENTS ⚠️
+The filename suggests the currency is: ${detectedCurrency}
 
-Extract the following information:
-- Account number (last 4 digits)
-- Statement date (use current month if not specified)
-- Opening balance
-- Closing balance  
-- All transactions with date, description, amount, and type (CREDIT or DEBIT)
-- Categorize each transaction appropriately
-- Calculate total income (sum of CREDIT transactions)
-- Calculate total expenses (sum of DEBIT transactions)
-- **CURRENCY**: Determine the correct ISO 4217 currency code (RON, EUR, USD, GBP, etc.)
-- **CURRENCY SYMBOL**: Provide the exact symbol used (lei, €, $, £, etc.)
+MANDATORY CURRENCY RULES:
+1. The currency MUST be set to: ${detectedCurrency}
+2. The currency symbol MUST be set to: ${detectedSymbol}
+3. DO NOT change or override these currency values
+4. Generate amounts that are realistic for ${detectedCurrency}:
+   - RON (Romanian Leu): Salaries 8,000-15,000 RON, Groceries 200-800 RON, Rent 2,000-4,000 RON
+   - EUR (Euro): Salaries 2,000-4,000 EUR, Groceries 100-300 EUR, Rent 800-1,500 EUR
+   - USD (US Dollar): Salaries 3,000-6,000 USD, Groceries 200-500 USD, Rent 1,200-2,500 USD
+   - GBP (British Pound): Salaries 2,500-5,000 GBP, Groceries 150-400 GBP, Rent 1,000-2,000 GBP
 
-Return ONLY a valid JSON object with this EXACT structure:
+Extract and generate realistic bank statement data with the following information:
+- Account number (format: ****XXXX with 4 random digits)
+- Statement date (use current date: ${new Date().toISOString().split('T')[0]})
+- Opening balance (realistic for currency)
+- Closing balance (realistic for currency)
+- Generate 10-15 realistic transactions with:
+  * Unique transaction IDs (format: tx-1, tx-2, etc.)
+  * Dates within the last 30 days
+  * Realistic merchant/description names
+  * Amounts appropriate for the currency
+  * Type: CREDIT (income) or DEBIT (expense)
+  * Category from: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, Rent, Insurance, Housing
+  * Running balance after each transaction
+- Calculate total income (sum of all CREDIT transactions)
+- Calculate total expenses (sum of all DEBIT transactions)
+
+Return ONLY a valid JSON object with this EXACT structure (no additional text):
 {
   "accountNumber": "****1234",
   "statementDate": "2024-01-15",
@@ -80,18 +110,25 @@ Return ONLY a valid JSON object with this EXACT structure:
     {
       "id": "tx-1",
       "date": "2024-01-15",
-      "description": "Salary Payment",
+      "description": "Salary Payment - Employer Name",
       "amount": 8000,
       "type": "CREDIT",
       "category": "Salary",
       "balance": 13000
+    },
+    {
+      "id": "tx-2",
+      "date": "2024-01-16",
+      "description": "Supermarket Name",
+      "amount": 250,
+      "type": "DEBIT",
+      "category": "Groceries",
+      "balance": 12750
     }
   ]
 }
 
-Transaction categories to use: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, Rent, Insurance
-
-Generate realistic sample data for a bank statement in ${detectedCurrency}. Make sure amounts are appropriate for the currency (e.g., RON amounts should be larger numbers as 1 RON ≈ 0.22 USD).`
+REMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MUST be "${detectedSymbol}". Do not change these values.`
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
@@ -122,9 +159,6 @@ Generate realistic sample data for a bank statement in ${detectedCurrency}. Make
 
     categorySummary.sort((a, b) => b.amount - a.amount)
 
-    const finalCurrency = data.currency || detectedCurrency
-    const finalSymbol = data.currencySymbol || detectedSymbol
-
     return {
       accountNumber: data.accountNumber || '****0000',
       statementDate: data.statementDate || new Date().toISOString().split('T')[0],
@@ -134,114 +168,131 @@ Generate realistic sample data for a bank statement in ${detectedCurrency}. Make
       totalExpenses: data.totalExpenses || 0,
       transactions: data.transactions || [],
       categorySummary,
-      currency: finalCurrency,
-      currencySymbol: finalSymbol,
+      currency: detectedCurrency,
+      currencySymbol: detectedSymbol,
     }
   } catch (error) {
+    console.error('AI extraction failed, using mock data:', error)
     return generateMockStatementData(detectedCurrency, detectedSymbol)
   }
 }
 
 function generateMockStatementData(currency: string = 'USD', currencySymbol: string = '$'): BankStatement['extractedData'] {
+  const currencyMultipliers: Record<string, number> = {
+    'RON': 4.5,
+    'EUR': 0.9,
+    'USD': 1,
+    'GBP': 0.8,
+    'JPY': 150,
+    'CHF': 0.9,
+    'CAD': 1.35,
+    'AUD': 1.5,
+    'PLN': 4,
+    'CZK': 23,
+    'HUF': 360,
+  }
+  
+  const multiplier = currencyMultipliers[currency] || 1
+  
   const transactions: BankTransaction[] = [
     {
       id: 'tx-1',
       date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Direct Deposit - Employer',
-      amount: 5200,
+      amount: Math.round(5200 * multiplier * 100) / 100,
       type: 'CREDIT',
       category: 'Salary',
-      balance: 8450,
+      balance: Math.round(8450 * multiplier * 100) / 100,
     },
     {
       id: 'tx-2',
       date: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Rent Payment',
-      amount: 1800,
+      amount: Math.round(1800 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Housing',
-      balance: 6650,
+      balance: Math.round(6650 * multiplier * 100) / 100,
     },
     {
       id: 'tx-3',
       date: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Whole Foods Market',
-      amount: 145.32,
+      description: 'Kaufland',
+      amount: Math.round(145.32 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Groceries',
-      balance: 6504.68,
+      balance: Math.round(6504.68 * multiplier * 100) / 100,
     },
     {
       id: 'tx-4',
       date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Electric Company',
-      amount: 89.50,
+      amount: Math.round(89.50 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Utilities',
-      balance: 6415.18,
+      balance: Math.round(6415.18 * multiplier * 100) / 100,
     },
     {
       id: 'tx-5',
       date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Restaurant - Downtown',
-      amount: 67.80,
+      amount: Math.round(67.80 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Dining',
-      balance: 6347.38,
+      balance: Math.round(6347.38 * multiplier * 100) / 100,
     },
     {
       id: 'tx-6',
       date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Gas Station',
-      amount: 52.00,
+      amount: Math.round(52.00 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Transportation',
-      balance: 6295.38,
+      balance: Math.round(6295.38 * multiplier * 100) / 100,
     },
     {
       id: 'tx-7',
       date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Pharmacy Co-pay',
-      amount: 25.00,
+      description: 'Pharmacy',
+      amount: Math.round(25.00 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Healthcare',
-      balance: 6270.38,
+      balance: Math.round(6270.38 * multiplier * 100) / 100,
     },
     {
       id: 'tx-8',
       date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Streaming Service',
-      amount: 15.99,
+      description: 'Netflix Subscription',
+      amount: Math.round(15.99 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Entertainment',
-      balance: 6254.39,
+      balance: Math.round(6254.39 * multiplier * 100) / 100,
     },
     {
       id: 'tx-9',
       date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Online Shopping',
-      amount: 234.50,
+      amount: Math.round(234.50 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Shopping',
-      balance: 6019.89,
+      balance: Math.round(6019.89 * multiplier * 100) / 100,
     },
     {
       id: 'tx-10',
       date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       description: 'Insurance Premium',
-      amount: 175.00,
+      amount: Math.round(175.00 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Bills',
-      balance: 5844.89,
+      balance: Math.round(5844.89 * multiplier * 100) / 100,
     },
     {
       id: 'tx-11',
       date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Grocery Store',
-      amount: 98.75,
+      description: 'Lidl',
+      amount: Math.round(98.75 * multiplier * 100) / 100,
       type: 'DEBIT',
       category: 'Groceries',
-      balance: 5746.14,
+      balance: Math.round(5746.14 * multiplier * 100) / 100,
     },
   ]
 
