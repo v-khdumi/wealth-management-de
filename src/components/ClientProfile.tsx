@@ -37,7 +37,7 @@ import { BankStatementUpload } from './BankStatementUpload'
 import { SpendingAlertsPanel } from './SpendingAlertsPanel'
 import { MultiStatementComparison } from './MultiStatementComparison'
 import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
-import { processBankStatement } from '@/lib/bank-statement-processor'
+import { processBankStatement, extractBankStatementData } from '@/lib/bank-statement-processor'
 import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
@@ -274,51 +274,59 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   }
 
   const checkForSpendingAlerts = (statementId: string) => {
-    const statement = (bankStatements || []).find(s => s.id === statementId)
-    if (!statement || !statement.extractedData) return
+    setBankStatements((currentStatements) => {
+      const statement = (currentStatements || []).find(s => s.id === statementId)
+      if (!statement || !statement.extractedData) return currentStatements || []
 
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-    
-    const budgets = categoryBudgets || []
-    budgets.forEach((budget: CategoryBudget) => {
-      const currentMonthSpending = (bankStatements || [])
-        .filter(s => {
-          if (!s.extractedData?.statementDate) return false
-          const stmtDate = new Date(s.extractedData.statementDate)
-          return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
-        })
-        .reduce((sum, s) => {
-          const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
-          return sum + categoryAmount
-        }, 0)
+      const now = new Date()
+      const currentMonth = now.getMonth()
+      const currentYear = now.getFullYear()
+      
+      const budgets = categoryBudgets || []
+      budgets.forEach((budget: CategoryBudget) => {
+        const currentMonthSpending = (currentStatements || [])
+          .filter(s => {
+            if (!s.extractedData?.statementDate) return false
+            const stmtDate = new Date(s.extractedData.statementDate)
+            return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
+          })
+          .reduce((sum, s) => {
+            const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
+            return sum + categoryAmount
+          }, 0)
 
-      const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
+        const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
 
-      if (percentage >= budget.alertThreshold) {
-        const existingAlert = (spendingAlerts || []).find(
-          a => a.userId === clientId && a.category === budget.category && !a.dismissed
-        )
+        if (percentage >= budget.alertThreshold) {
+          setSpendingAlerts((currentAlerts) => {
+            const existingAlert = (currentAlerts || []).find(
+              a => a.userId === clientId && a.category === budget.category && !a.dismissed
+            )
 
-        if (!existingAlert) {
-          const alert: SpendingAlert = {
-            id: `alert-${Date.now()}-${budget.category}`,
-            userId: clientId,
-            category: budget.category,
-            currentSpending: currentMonthSpending,
-            budgetLimit: budget.monthlyLimit,
-            threshold: budget.alertThreshold,
-            percentage,
-            severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
-            statementIds: [statementId],
-            createdAt: new Date().toISOString(),
-            dismissed: false
-          }
+            if (!existingAlert) {
+              const alert: SpendingAlert = {
+                id: `alert-${Date.now()}-${budget.category}`,
+                userId: clientId,
+                category: budget.category,
+                currentSpending: currentMonthSpending,
+                budgetLimit: budget.monthlyLimit,
+                threshold: budget.alertThreshold,
+                percentage,
+                severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
+                statementIds: [statementId],
+                createdAt: new Date().toISOString(),
+                dismissed: false
+              }
 
-          setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
+              return [...(currentAlerts || []), alert]
+            }
+            
+            return currentAlerts || []
+          })
         }
-      }
+      })
+      
+      return currentStatements || []
     })
   }
 
@@ -328,19 +336,47 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       setBankStatements((currentStatements) => [...(currentStatements || []), statement])
       
       toast.success('Statement uploaded successfully!', {
-        description: `Processing ${file.name}...`,
+        description: `AI is processing ${file.name}...`,
       })
 
-      setTimeout(() => {
+      try {
+        const extractedData = await extractBankStatementData(file, statement.id)
+        
         setBankStatements((currentStatements) =>
           (currentStatements || []).map((s) =>
             s.id === statement.id
-              ? { ...s, status: 'COMPLETED' as const, processedAt: new Date().toISOString() }
+              ? { 
+                  ...s, 
+                  status: 'COMPLETED' as const, 
+                  processedAt: new Date().toISOString(),
+                  extractedData 
+                }
               : s
           )
         )
+        
         checkForSpendingAlerts(statement.id)
-      }, 2500)
+        
+        toast.success('Statement processed successfully!', {
+          description: `Found ${extractedData?.transactions?.length || 0} transactions`,
+        })
+      } catch (extractError) {
+        setBankStatements((currentStatements) =>
+          (currentStatements || []).map((s) =>
+            s.id === statement.id
+              ? { 
+                  ...s, 
+                  status: 'FAILED' as const,
+                  errorMessage: 'Failed to extract data from statement'
+                }
+              : s
+          )
+        )
+        
+        toast.error('Processing failed', {
+          description: 'Could not extract data from the statement',
+        })
+      }
     } catch (error) {
       console.error('Upload error:', error)
       toast.error('Upload failed', {

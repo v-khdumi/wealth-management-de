@@ -12,19 +12,19 @@ export async function processBankStatement(
     status: 'PROCESSING',
   }
 
-  setTimeout(async () => {
-    try {
-      const extractedData = await extractDataWithAI(file)
-      statement.extractedData = extractedData
-      statement.processedAt = new Date().toISOString()
-      statement.status = 'COMPLETED'
-    } catch (error) {
-      statement.status = 'FAILED'
-      statement.errorMessage = 'Failed to process statement. Please ensure it\'s a valid bank statement.'
-    }
-  }, 2000)
-
   return statement
+}
+
+export async function extractBankStatementData(
+  file: File,
+  statementId: string
+): Promise<BankStatement['extractedData']> {
+  try {
+    const extractedData = await extractDataWithAI(file)
+    return extractedData
+  } catch (error) {
+    throw new Error('Failed to process statement. Please ensure it\'s a valid bank statement.')
+  }
 }
 
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
