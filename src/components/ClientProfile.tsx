@@ -22,6 +22,7 @@ import {
   CurrencyCircleDollar,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
+import { useUserCurrency } from '@/hooks/use-user-currency'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
@@ -45,6 +46,7 @@ import { CurrencySpendingTrends } from './CurrencySpendingTrends'
 import { GoalTrackingFromStatements } from './GoalTrackingFromStatements'
 import { MultiCurrencyReportExport } from './MultiCurrencyReportExport'
 import { processBankStatement, extractBankStatementData } from '@/lib/bank-statement-processor'
+import { formatCurrency } from '@/lib/utils'
 import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert, RegionalBudget } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
@@ -99,6 +101,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
   const clientBudgets = useMemo(() => (regionalBudgets || []).filter(b => b.userId === clientId), [regionalBudgets, clientId])
   const clientCurrencyAccounts = useMemo(() => (currencyAccounts || []).filter(ca => portfolios?.find(p => p.id === ca.portfolioId && p.clientId === clientId)), [currencyAccounts, portfolios, clientId])
+
+  const userCurrency = useUserCurrency(clientId, bankStatements || [])
 
   const age = profile ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0
   const riskStale = riskProfile ? isRiskProfileStale(riskProfile) : false
@@ -729,11 +733,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                           <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
                             <div>
                               <p className="text-muted-foreground mb-1">Current Savings</p>
-                              <p className="font-semibold text-lg">${goal.currentAmount.toLocaleString()}</p>
+                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, userCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Still Needed</p>
-                              <p className="font-semibold text-lg text-warning">${gap.toLocaleString()}</p>
+                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, userCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Target Date</p>
@@ -741,7 +745,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Monthly Saving</p>
-                              <p className="font-semibold">${goal.monthlyContribution.toLocaleString()}</p>
+                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, userCurrency.symbol)}</p>
                             </div>
                           </div>
                         </div>
@@ -786,7 +790,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-display font-bold text-primary wealth-number">
-              ${portfolio?.totalValue.toLocaleString() || '0'}
+              {formatCurrency(portfolio?.totalValue || 0, userCurrency.symbol)}
             </p>
             <div className="flex items-center gap-2 mt-2 text-sm">
               <TrendUp size={16} className="text-success" weight="bold" />
@@ -1132,11 +1136,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                           <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
                             <div>
                               <p className="text-muted-foreground mb-1">Current Savings</p>
-                              <p className="font-semibold text-lg">${goal.currentAmount.toLocaleString()}</p>
+                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, userCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Still Needed</p>
-                              <p className="font-semibold text-lg text-warning">${gap.toLocaleString()}</p>
+                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, userCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Target Date</p>
@@ -1144,7 +1148,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Monthly Saving</p>
-                              <p className="font-semibold">${goal.monthlyContribution.toLocaleString()}</p>
+                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, userCurrency.symbol)}</p>
                             </div>
                           </div>
 
@@ -1153,7 +1157,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               <div>
                                 <p className="font-semibold text-warning mb-1">💡 Recommendation</p>
                                 <p className="text-sm">
-                                  Consider increasing your monthly contribution by <strong>${Math.floor(required - goal.monthlyContribution).toLocaleString()}</strong> to stay on track for your target date.
+                                  Consider increasing your monthly contribution by <strong>{formatCurrency(Math.floor(required - goal.monthlyContribution), userCurrency.symbol)}</strong> to stay on track for your target date.
                                 </p>
                               </div>
                               <Button

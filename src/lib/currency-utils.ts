@@ -152,3 +152,27 @@ export function detectUniqueCurrencies(statements: Array<{ extractedData?: { cur
   
   return Array.from(currencies).sort()
 }
+
+export function getUserPrimaryCurrency(statements: Array<{ extractedData?: { currency?: string } }>): string | null {
+  const currencies = detectUniqueCurrencies(statements)
+  if (currencies.length === 0) return null
+  
+  const currencyFrequency = new Map<string, number>()
+  statements.forEach(statement => {
+    const currency = statement.extractedData?.currency
+    if (currency) {
+      currencyFrequency.set(currency, (currencyFrequency.get(currency) || 0) + 1)
+    }
+  })
+  
+  let mostFrequentCurrency = currencies[0]
+  let maxCount = 0
+  currencyFrequency.forEach((count, currency) => {
+    if (count > maxCount) {
+      maxCount = count
+      mostFrequentCurrency = currency
+    }
+  })
+  
+  return mostFrequentCurrency
+}
