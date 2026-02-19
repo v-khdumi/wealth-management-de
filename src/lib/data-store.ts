@@ -17,6 +17,8 @@ import type {
   BankStatement,
   CategoryBudget,
   SpendingAlert,
+  RegionalBudget,
+  CurrencyAccount,
 } from './types'
 import {
   SEED_USERS,
@@ -67,6 +69,8 @@ export function useDataStore() {
   const [bankStatements, setBankStatements] = useKV<BankStatement[]>('bank_statements', [])
   const [categoryBudgets, setCategoryBudgets] = useKV<CategoryBudget[]>('category_budgets', [])
   const [spendingAlerts, setSpendingAlerts] = useKV<SpendingAlert[]>('spending_alerts', [])
+  const [regionalBudgets, setRegionalBudgets] = useKV<RegionalBudget[]>('regional_budgets', [])
+  const [currencyAccounts, setCurrencyAccounts] = useKV<CurrencyAccount[]>('currency_accounts', [])
 
   return {
     users,
@@ -97,5 +101,9 @@ export function useDataStore() {
     setCategoryBudgets,
     spendingAlerts,
     setSpendingAlerts,
+    regionalBudgets,
+    setRegionalBudgets,
+    currencyAccounts,
+    setCurrencyAccounts,
   }
 }

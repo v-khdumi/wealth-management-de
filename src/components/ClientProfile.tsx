@@ -19,6 +19,7 @@ import {
   Eye,
   Users,
   UploadSimple,
+  CurrencyCircleDollar,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
@@ -37,8 +38,11 @@ import { BankStatementUpload } from './BankStatementUpload'
 import { SpendingAlertsPanel } from './SpendingAlertsPanel'
 import { MultiStatementComparison } from './MultiStatementComparison'
 import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
+import { MultiCurrencyPortfolio } from './MultiCurrencyPortfolio'
+import { RegionalBudgets } from './RegionalBudgets'
+import { MultiCurrencySpendingComparison } from './MultiCurrencySpendingComparison'
 import { processBankStatement, extractBankStatementData } from '@/lib/bank-statement-processor'
-import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert } from '@/lib/types'
+import type { Goal, GoalMilestone, GoalType, FamilyMember, CategoryBudget, SpendingAlert, RegionalBudget } from '@/lib/types'
 import type { GoalTemplate } from '@/lib/goal-templates'
 import { toast } from 'sonner'
 
@@ -53,6 +57,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     riskProfiles,
     goals,
     portfolios,
+    holdings,
+    instruments,
     setGoals,
     bankStatements,
     setBankStatements,
@@ -60,6 +66,9 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     setCategoryBudgets,
     spendingAlerts,
     setSpendingAlerts,
+    regionalBudgets,
+    setRegionalBudgets,
+    currencyAccounts,
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
@@ -83,7 +92,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const riskProfile = useMemo(() => (riskProfiles || []).find(rp => rp.clientId === clientId), [riskProfiles, clientId])
   const clientGoals = useMemo(() => (goals || []).filter(g => g.clientId === clientId), [goals, clientId])
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
+  const portfolioHoldings = useMemo(() => (holdings || []).filter(h => h.portfolioId === portfolio?.id), [holdings, portfolio])
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
+  const clientBudgets = useMemo(() => (regionalBudgets || []).filter(b => b.userId === clientId), [regionalBudgets, clientId])
+  const clientCurrencyAccounts = useMemo(() => (currencyAccounts || []).filter(ca => portfolios?.find(p => p.id === ca.portfolioId && p.clientId === clientId)), [currencyAccounts, portfolios, clientId])
 
   const age = profile ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0
   const riskStale = riskProfile ? isRiskProfileStale(riskProfile) : false
@@ -428,6 +440,28 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
+  const handleCreateRegionalBudget = (budget: Omit<RegionalBudget, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newBudget: RegionalBudget = {
+      ...budget,
+      id: `budget-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    setRegionalBudgets((current) => [...(current || []), newBudget])
+  }
+
+  const handleUpdateRegionalBudget = (budgetId: string, updates: Partial<RegionalBudget>) => {
+    setRegionalBudgets((current) =>
+      (current || []).map(b => 
+        b.id === budgetId ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b
+      )
+    )
+  }
+
+  const handleDeleteRegionalBudget = (budgetId: string) => {
+    setRegionalBudgets((current) => (current || []).filter(b => b.id !== budgetId))
+  }
+
   if (!users || !clientProfiles || !riskProfiles || !portfolios) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -677,30 +711,38 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-6 w-full">
+            <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full gap-1">
               <TabsTrigger value="overview" className="gap-2">
                 <UserIcon size={16} />
-                <span className="hidden sm:inline">Overview</span>
+                <span className="hidden lg:inline">Overview</span>
               </TabsTrigger>
               <TabsTrigger value="insights" className="gap-2">
                 <Lightbulb size={16} />
-                <span className="hidden sm:inline">Insights</span>
+                <span className="hidden lg:inline">Insights</span>
               </TabsTrigger>
               <TabsTrigger value="portfolio" className="gap-2">
                 <ChartLine size={16} />
-                <span className="hidden sm:inline">Portfolio</span>
+                <span className="hidden lg:inline">Portfolio</span>
+              </TabsTrigger>
+              <TabsTrigger value="multi-currency" className="gap-2">
+                <CurrencyCircleDollar size={16} />
+                <span className="hidden lg:inline">Multi-Currency</span>
               </TabsTrigger>
               <TabsTrigger value="goals" className="gap-2">
                 <Target size={16} />
-                <span className="hidden sm:inline">Goals</span>
+                <span className="hidden lg:inline">Goals</span>
+              </TabsTrigger>
+              <TabsTrigger value="budgets" className="gap-2">
+                <Wallet size={16} />
+                <span className="hidden lg:inline">Budgets</span>
               </TabsTrigger>
               <TabsTrigger value="upload" className="gap-2">
                 <UploadSimple size={16} />
-                <span className="hidden sm:inline">Upload</span>
+                <span className="hidden lg:inline">Upload</span>
               </TabsTrigger>
               <TabsTrigger value="activity" className="gap-2">
                 <ClockCounterClockwise size={16} />
-                <span className="hidden sm:inline">Activity</span>
+                <span className="hidden lg:inline">Activity</span>
               </TabsTrigger>
             </TabsList>
 
@@ -811,6 +853,32 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
             <TabsContent value="portfolio" className="mt-6">
               <PortfolioView clientId={clientId} />
+            </TabsContent>
+
+            <TabsContent value="multi-currency" className="mt-6 space-y-6">
+              {portfolio && (
+                <MultiCurrencyPortfolio
+                  portfolio={portfolio}
+                  holdings={portfolioHoldings}
+                  instruments={instruments || []}
+                  currencyAccounts={clientCurrencyAccounts}
+                />
+              )}
+              
+              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+                <MultiCurrencySpendingComparison statements={clientStatements} />
+              )}
+            </TabsContent>
+
+            <TabsContent value="budgets" className="mt-6">
+              <RegionalBudgets
+                userId={clientId}
+                regionalBudgets={clientBudgets}
+                bankStatements={clientStatements}
+                onCreateBudget={handleCreateRegionalBudget}
+                onUpdateBudget={handleUpdateRegionalBudget}
+                onDeleteBudget={handleDeleteRegionalBudget}
+              />
             </TabsContent>
 
             <TabsContent value="goals" className="mt-6">

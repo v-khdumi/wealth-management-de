@@ -238,6 +238,8 @@ export interface Portfolio {
   cash: number
   totalValue: number
   lastUpdated: string
+  currency?: string
+  baseCurrency?: string
 }
 
 export interface Holding {
@@ -248,6 +250,7 @@ export interface Holding {
   averageCost: number
   currentPrice: number
   lastUpdated: string
+  currency?: string
 }
 
 export interface Instrument {
@@ -259,6 +262,26 @@ export interface Instrument {
   suitabilityMinRisk: number
   suitabilityMaxRisk: number
   description: string
+  currency?: string
+}
+
+export interface CurrencyAccount {
+  id: string
+  portfolioId: string
+  currency: string
+  balance: number
+  lastUpdated: string
+}
+
+export interface RegionalBudget {
+  id: string
+  userId: string
+  region: string
+  currency: string
+  categories: CategoryBudget[]
+  monthlyTotal: number
+  createdAt: string
+  updatedAt: string
 }
 
 export interface ModelPortfolio {
