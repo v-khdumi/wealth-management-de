@@ -28,44 +28,70 @@ export async function extractBankStatementData(
 }
 
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
-  const promptText = `You are a financial data extraction AI. Extract the following information from this bank statement:
-  - Account number (last 4 digits)
-  - Statement date
-  - Opening balance
-  - Closing balance
-  - All transactions with date, description, amount, and type (CREDIT or DEBIT)
-  - Categorize each transaction
-  - Calculate total income and expenses
-  - IMPORTANT: Detect the currency used in the document (e.g., USD, EUR, RON, GBP, etc.)
-  - Extract the currency symbol used (e.g., $, €, lei, £, etc.)
+  const fileName = file.name.toLowerCase()
   
-  Return the data in JSON format matching this structure:
-  {
-    "accountNumber": "string",
-    "statementDate": "YYYY-MM-DD",
-    "openingBalance": number,
-    "closingBalance": number,
-    "totalIncome": number,
-    "totalExpenses": number,
-    "currency": "string (ISO 4217 code like USD, EUR, RON, GBP, etc.)",
-    "currencySymbol": "string (the actual symbol used: $, €, lei, £, etc.)",
-    "transactions": [
-      {
-        "id": "string",
-        "date": "YYYY-MM-DD",
-        "description": "string",
-        "amount": number,
-        "type": "CREDIT" | "DEBIT",
-        "category": "string"
-      }
-    ]
+  let detectedCurrency = 'USD'
+  let detectedSymbol = '$'
+  
+  if (fileName.includes('ron') || fileName.includes('romania') || fileName.includes('lei')) {
+    detectedCurrency = 'RON'
+    detectedSymbol = 'lei'
+  } else if (fileName.includes('eur') || fileName.includes('euro')) {
+    detectedCurrency = 'EUR'
+    detectedSymbol = '€'
+  } else if (fileName.includes('gbp') || fileName.includes('pound')) {
+    detectedCurrency = 'GBP'
+    detectedSymbol = '£'
   }
-  
-  Use realistic categories like: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, etc.
-  
-  CRITICAL: Always detect and extract the currency from the bank statement. Look for currency symbols, ISO codes, or currency names in the document.
-  
-  Since this is a demo, generate realistic sample data for a typical bank statement.`
+
+  const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
+
+CRITICAL INSTRUCTIONS FOR CURRENCY DETECTION:
+1. First, analyze the filename for currency hints (RON, EUR, USD, GBP, etc.)
+2. Look for currency symbols in the document (lei, €, $, £, etc.)
+3. Check for ISO currency codes (RON, EUR, USD, GBP, etc.)
+4. If the filename contains "RON" or "lei" or "romania", the currency MUST be RON with symbol "lei"
+5. If the filename contains "EUR" or "euro", the currency MUST be EUR with symbol "€"
+6. Default to the detected currency from the filename if present: ${detectedCurrency}
+
+Extract the following information:
+- Account number (last 4 digits)
+- Statement date (use current month if not specified)
+- Opening balance
+- Closing balance  
+- All transactions with date, description, amount, and type (CREDIT or DEBIT)
+- Categorize each transaction appropriately
+- Calculate total income (sum of CREDIT transactions)
+- Calculate total expenses (sum of DEBIT transactions)
+- **CURRENCY**: Determine the correct ISO 4217 currency code (RON, EUR, USD, GBP, etc.)
+- **CURRENCY SYMBOL**: Provide the exact symbol used (lei, €, $, £, etc.)
+
+Return ONLY a valid JSON object with this EXACT structure:
+{
+  "accountNumber": "****1234",
+  "statementDate": "2024-01-15",
+  "openingBalance": 5000,
+  "closingBalance": 6500,
+  "totalIncome": 8000,
+  "totalExpenses": 6500,
+  "currency": "${detectedCurrency}",
+  "currencySymbol": "${detectedSymbol}",
+  "transactions": [
+    {
+      "id": "tx-1",
+      "date": "2024-01-15",
+      "description": "Salary Payment",
+      "amount": 8000,
+      "type": "CREDIT",
+      "category": "Salary",
+      "balance": 13000
+    }
+  ]
+}
+
+Transaction categories to use: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, Rent, Insurance
+
+Generate realistic sample data for a bank statement in ${detectedCurrency}. Make sure amounts are appropriate for the currency (e.g., RON amounts should be larger numbers as 1 RON ≈ 0.22 USD).`
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
@@ -96,24 +122,27 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
 
     categorySummary.sort((a, b) => b.amount - a.amount)
 
+    const finalCurrency = data.currency || detectedCurrency
+    const finalSymbol = data.currencySymbol || detectedSymbol
+
     return {
-      accountNumber: data.accountNumber,
-      statementDate: data.statementDate,
-      openingBalance: data.openingBalance,
-      closingBalance: data.closingBalance,
-      totalIncome: data.totalIncome,
-      totalExpenses: data.totalExpenses,
-      transactions: data.transactions,
+      accountNumber: data.accountNumber || '****0000',
+      statementDate: data.statementDate || new Date().toISOString().split('T')[0],
+      openingBalance: data.openingBalance || 0,
+      closingBalance: data.closingBalance || 0,
+      totalIncome: data.totalIncome || 0,
+      totalExpenses: data.totalExpenses || 0,
+      transactions: data.transactions || [],
       categorySummary,
-      currency: data.currency || 'USD',
-      currencySymbol: data.currencySymbol || '$',
+      currency: finalCurrency,
+      currencySymbol: finalSymbol,
     }
   } catch (error) {
-    return generateMockStatementData()
+    return generateMockStatementData(detectedCurrency, detectedSymbol)
   }
 }
 
-function generateMockStatementData(): BankStatement['extractedData'] {
+function generateMockStatementData(currency: string = 'USD', currencySymbol: string = '$'): BankStatement['extractedData'] {
   const transactions: BankTransaction[] = [
     {
       id: 'tx-1',
@@ -251,7 +280,7 @@ function generateMockStatementData(): BankStatement['extractedData'] {
     totalExpenses,
     transactions,
     categorySummary,
-    currency: 'USD',
-    currencySymbol: '$',
+    currency,
+    currencySymbol,
   }
 }
