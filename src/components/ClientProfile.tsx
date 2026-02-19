@@ -97,6 +97,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
 
+  const isBlankUser = clientId === 'cli-blank'
+
   if (!client || !profile || !riskProfile) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -130,6 +132,228 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const totalGoalsProgress = clientGoals.length > 0
     ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
     : 0
+
+  if (isBlankUser) {
+    const handleFileUploadWrapper = async (file: File) => {
+      try {
+        const statement = await processBankStatement(file, clientId)
+        
+        setBankStatements((currentStatements) => [
+          ...(currentStatements || []),
+          statement,
+        ])
+
+        toast.success('Statement uploaded successfully!', {
+          description: `Processing ${file.name}...`,
+        })
+
+        setTimeout(() => {
+          checkForSpendingAlertsWrapper(statement.id)
+        }, 2500)
+      } catch (error) {
+        console.error('Upload error:', error)
+        toast.error('Upload failed', {
+          description: error instanceof Error ? error.message : 'Please try again',
+        })
+      }
+    }
+
+    const handleCreateGoalFromTemplateWrapper = (template: GoalTemplate, customAmount: number, customYears: number) => {
+      const targetDate = new Date()
+      targetDate.setFullYear(targetDate.getFullYear() + customYears)
+      
+      const monthlyContribution = Math.ceil(customAmount / (customYears * 12))
+      
+      const newGoal: Goal = {
+        id: `goal-${Date.now()}`,
+        clientId: clientId,
+        type: template.type,
+        name: template.name,
+        targetAmount: customAmount,
+        currentAmount: 0,
+        targetDate: targetDate.toISOString(),
+        monthlyContribution: monthlyContribution,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        progressHistory: [],
+      }
+      
+      setGoals((currentGoals) => [...(currentGoals || []), newGoal])
+      setShowTemplateDialog(false)
+      
+      toast.success('Goal created!', {
+        description: `${template.name} has been added to your financial plan`,
+      })
+    }
+
+    const checkForSpendingAlertsWrapper = (statementId: string) => {
+      const statement = (bankStatements || []).find(s => s.id === statementId)
+      if (!statement || !statement.extractedData) return
+
+      const now = new Date()
+      const currentMonth = now.getMonth()
+      const currentYear = now.getFullYear()
+      
+      const budgets = categoryBudgets || []
+      budgets.forEach((budget: CategoryBudget) => {
+        const currentMonthSpending = (bankStatements || [])
+          .filter(s => {
+            if (!s.extractedData?.statementDate) return false
+            const stmtDate = new Date(s.extractedData.statementDate)
+            return stmtDate.getMonth() === currentMonth && stmtDate.getFullYear() === currentYear
+          })
+          .reduce((sum, s) => {
+            const categoryAmount = s.extractedData?.categorySummary?.find(c => c.category === budget.category)?.amount || 0
+            return sum + categoryAmount
+          }, 0)
+
+        const percentage = (currentMonthSpending / budget.monthlyLimit) * 100
+
+        if (percentage >= budget.alertThreshold) {
+          const existingAlert = (spendingAlerts || []).find(
+            a => a.userId === clientId && a.category === budget.category && !a.dismissed
+          )
+
+          if (!existingAlert) {
+            const alert: SpendingAlert = {
+              id: `alert-${Date.now()}-${budget.category}`,
+              userId: clientId,
+              category: budget.category,
+              currentSpending: currentMonthSpending,
+              budgetLimit: budget.monthlyLimit,
+              threshold: budget.alertThreshold,
+              percentage,
+              severity: percentage >= 100 ? 'CRITICAL' : 'WARNING',
+              statementIds: [statementId],
+              createdAt: new Date().toISOString(),
+              dismissed: false
+            }
+
+            setSpendingAlerts((currentAlerts) => [...(currentAlerts || []), alert])
+          }
+        }
+      })
+    }
+
+    return (
+      <div className="space-y-6">
+        <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-transparent">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-accent/20">
+                <UploadSimple size={24} className="text-accent" weight="duotone" />
+              </div>
+              Welcome to Your Wealth Dashboard
+            </CardTitle>
+            <CardDescription>
+              Start by uploading your bank statements to get personalized insights and recommendations
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg bg-muted/50 p-6 space-y-3">
+              <h4 className="font-semibold text-foreground">Getting Started</h4>
+              <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                <li>Upload your bank statements (PDF, CSV, or image formats)</li>
+                <li>Our AI will automatically extract transactions and spending patterns</li>
+                <li>Review your financial insights and set up personalized goals</li>
+                <li>Track progress and get smart recommendations</li>
+              </ol>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Tabs value="upload" className="space-y-6">
+          <TabsList className="grid grid-cols-3 w-full max-w-md">
+            <TabsTrigger value="upload" className="gap-2">
+              <UploadSimple size={16} />
+              Upload Statements
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" disabled className="gap-2">
+              <ChartLine size={16} />
+              Portfolio
+            </TabsTrigger>
+            <TabsTrigger value="goals" disabled className="gap-2">
+              <Target size={16} />
+              Goals
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload" className="space-y-6">
+            <BankStatementUpload statements={clientStatements} onUpload={handleFileUploadWrapper} />
+            
+            {clientStatements.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Uploaded Statements</CardTitle>
+                  <CardDescription>
+                    {clientStatements.length} statement{clientStatements.length !== 1 ? 's' : ''} uploaded
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {clientStatements.map(statement => (
+                    <div
+                      key={statement.id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{statement.fileName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {statement.extractedData?.transactions?.length || 0} transactions • 
+                          Uploaded {new Date(statement.uploadedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant="secondary">
+                        {statement.extractedData?.statementDate 
+                          ? new Date(statement.extractedData.statementDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                          : 'Processed'
+                        }
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {clientStatements.length > 0 && (
+              <Card className="border-accent/30 bg-accent/5">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lightbulb size={20} className="text-accent" weight="duotone" />
+                    Next Steps
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Now that you've uploaded your statements, you can:
+                  </p>
+                  <div className="space-y-2">
+                    <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setShowTemplateDialog(true)}>
+                      <Target size={16} />
+                      Create Your First Financial Goal
+                      <ArrowRight size={14} className="ml-auto" />
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start gap-2" disabled>
+                      <ChartLine size={16} />
+                      View Spending Analytics
+                      <span className="ml-auto text-xs text-muted-foreground">Coming soon</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        <GoalTemplateDialog
+          open={showTemplateDialog}
+          onOpenChange={(open) => setShowTemplateDialog(open)}
+          onSelectTemplate={handleCreateGoalFromTemplateWrapper}
+          userAge={age}
+          userRiskScore={riskProfile.score}
+        />
+      </div>
+    )
+  }
 
   const handleSimulateContribution = (goalId: string) => {
     setGoals((currentGoals) => {
