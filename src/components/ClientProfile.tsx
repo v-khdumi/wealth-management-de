@@ -63,6 +63,20 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState('overview')
+  
+  if (!users || !clientProfiles || !riskProfiles || !portfolios) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">⏳</div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Loading...</h3>
+            <p className="text-sm text-muted-foreground">Initializing your account data</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
   const [selectedGoalForFamily, setSelectedGoalForFamily] = useState<Goal | null>(null)
@@ -83,8 +97,32 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
 
-  if (!client || !profile || !riskProfile || !portfolio) {
-    return <div>Account not found</div>
+  if (!client || !profile || !riskProfile) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">❌</div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Account not found</h3>
+            <p className="text-sm text-muted-foreground">Missing data for: {!client ? 'User' : !profile ? 'Profile' : 'Risk Profile'}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!portfolio) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">📊</div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Portfolio Initializing</h3>
+            <p className="text-sm text-muted-foreground">Your portfolio is being set up. Please refresh the page.</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const age = Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
