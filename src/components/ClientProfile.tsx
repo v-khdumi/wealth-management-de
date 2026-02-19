@@ -400,14 +400,29 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
-  if (!client || !profile || !riskProfile) {
+  if (!client) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center space-y-4">
           <div className="text-6xl">❌</div>
           <div>
             <h3 className="text-xl font-semibold mb-2">Account not found</h3>
-            <p className="text-sm text-muted-foreground">Missing data for: {!client ? 'User' : !profile ? 'Profile' : 'Risk Profile'}</p>
+            <p className="text-sm text-muted-foreground">User not found in system</p>
+            <p className="text-xs text-muted-foreground mt-2">Client ID: {clientId}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isBlankUser && (!profile || !riskProfile)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">❌</div>
+          <div>
+            <h3 className="text-xl font-semibold mb-2">Account not found</h3>
+            <p className="text-sm text-muted-foreground">Missing data for: {!profile ? 'Profile' : 'Risk Profile'}</p>
             <p className="text-xs text-muted-foreground mt-2">Client ID: {clientId}</p>
           </div>
         </div>
@@ -544,7 +559,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           onOpenChange={(open) => setShowTemplateDialog(open)}
           onSelectTemplate={handleCreateGoalFromTemplate}
           userAge={age}
-          userRiskScore={riskProfile.score}
+          userRiskScore={riskProfile?.score || 5}
         />
       </div>
     )
@@ -598,10 +613,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-display font-bold text-accent wealth-number">
-              {riskProfile.score}/10
+              {riskProfile?.score || 0}/10
             </p>
             <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-xs">{riskProfile.category}</Badge>
+              <Badge variant="outline" className="text-xs">{riskProfile?.category || 'N/A'}</Badge>
               {riskStale && (
                 <Badge variant="destructive" className="text-xs gap-1">
                   <Warning size={12} weight="fill" />
@@ -662,11 +677,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{profile.phone}</p>
+                    <p className="font-medium">{profile?.phone || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Member Since</p>
-                    <p className="font-medium">{new Date(profile.onboardingDate).toLocaleDateString()}</p>
+                    <p className="font-medium">{profile?.onboardingDate ? new Date(profile.onboardingDate).toLocaleDateString() : 'N/A'}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -691,18 +706,18 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                   <div>
                     <div className="flex justify-between mb-2">
                       <span className="text-sm text-muted-foreground">Risk Tolerance</span>
-                      <span className="font-bold wealth-number text-xl">{riskProfile.score}/10</span>
+                      <span className="font-bold wealth-number text-xl">{riskProfile?.score || 0}/10</span>
                     </div>
-                    <Progress value={riskProfile.score * 10} className="h-3" />
+                    <Progress value={(riskProfile?.score || 0) * 10} className="h-3" />
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Category</p>
-                    <Badge variant="outline" className="mt-1 text-sm">{riskProfile.category}</Badge>
+                    <Badge variant="outline" className="mt-1 text-sm">{riskProfile?.category || 'N/A'}</Badge>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Last Updated</p>
                     <p className="font-medium">
-                      {new Date(riskProfile.lastUpdated).toLocaleDateString()}
+                      {riskProfile?.lastUpdated ? new Date(riskProfile.lastUpdated).toLocaleDateString() : 'N/A'}
                       {riskStale && (
                         <span className="text-destructive text-xs ml-2">
                           (Updated over 6 months ago - we recommend refreshing)
@@ -982,7 +997,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         onSelectTemplate={handleCreateGoalFromTemplate}
         onCreateCustom={() => setShowCustomGoalDialog(true)}
         userAge={age}
-        userRiskScore={riskProfile.score}
+        userRiskScore={riskProfile?.score || 5}
       />
 
       <CustomGoalDialog
