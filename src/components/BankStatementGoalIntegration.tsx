@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -8,15 +8,24 @@ import {
   Target,
   Warning,
   CheckCircle,
+  CurrencyCircleDollar,
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import type { BankStatement, Goal } from '@/lib/types'
+import { 
+  getExchangeRates, 
+  convertCurrency, 
+  getCurrencySymbol,
+  detectUniqueCurrencies,
+  formatCurrencyWithCode
+} from '@/lib/currency-utils'
 
 interface BankStatementGoalIntegrationProps {
   userId: string
   statements: BankStatement[]
   goals: Goal[]
   onUpdateGoal: (goalId: string, newContribution: number) => void
+  baseCurrency?: string
 }
 
 interface SpendingInsight {
@@ -25,6 +34,7 @@ interface SpendingInsight {
   potentialSavings: number
   recommendation: string
   confidence: 'HIGH' | 'MEDIUM' | 'LOW'
+  currency: string
 }
 
 export function BankStatementGoalIntegration({
@@ -32,26 +42,60 @@ export function BankStatementGoalIntegration({
   statements,
   goals,
   onUpdateGoal,
+  baseCurrency = 'USD',
 }: BankStatementGoalIntegrationProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<string>('')
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
+  const [isLoadingRates, setIsLoadingRates] = useState(false)
+
+  const availableCurrencies = useMemo(() => detectUniqueCurrencies(statements), [statements])
+  const hasMultipleCurrencies = availableCurrencies.length > 1
+
+  useEffect(() => {
+    const loadRates = async () => {
+      if (!hasMultipleCurrencies) return
+      
+      setIsLoadingRates(true)
+      try {
+        const rates = await getExchangeRates(baseCurrency)
+        setExchangeRates(rates)
+      } catch (error) {
+        console.error('Failed to load exchange rates:', error)
+      } finally {
+        setIsLoadingRates(false)
+      }
+    }
+    
+    loadRates()
+  }, [baseCurrency, hasMultipleCurrencies])
 
   const completedStatements = useMemo(() =>
     statements.filter(s => s.status === 'COMPLETED' && s.extractedData),
     [statements]
   )
 
+  const convert = (amount: number, fromCurrency: string) => {
+    if (!hasMultipleCurrencies || Object.keys(exchangeRates).length === 0) {
+      return amount
+    }
+    return convertCurrency(amount, fromCurrency, baseCurrency, exchangeRates)
+  }
+
   const spendingInsights = useMemo((): SpendingInsight[] => {
     if (completedStatements.length === 0) return []
 
-    const categoryAverages = new Map<string, number[]>()
+    const categoryAverages = new Map<string, { amounts: number[], currencies: string[] }>()
     
     completedStatements.forEach(stmt => {
+      const currency = stmt.extractedData?.currency || 'USD'
       stmt.extractedData?.categorySummary?.forEach(cat => {
         if (!categoryAverages.has(cat.category)) {
-          categoryAverages.set(cat.category, [])
+          categoryAverages.set(cat.category, { amounts: [], currencies: [] })
         }
-        categoryAverages.get(cat.category)!.push(cat.amount)
+        const convertedAmount = convert(cat.amount, currency)
+        categoryAverages.get(cat.category)!.amounts.push(convertedAmount)
+        categoryAverages.get(cat.category)!.currencies.push(currency)
       })
     })
 
@@ -66,7 +110,7 @@ export function BankStatementGoalIntegration({
       'Coffee & Snacks'
     ]
 
-    categoryAverages.forEach((amounts, category) => {
+    categoryAverages.forEach(({ amounts, currencies }, category) => {
       const monthlyAverage = amounts.reduce((sum, a) => sum + a, 0) / amounts.length
       
       if (discretionaryCategories.includes(category) && monthlyAverage > 100) {
@@ -76,14 +120,15 @@ export function BankStatementGoalIntegration({
           category,
           monthlyAverage,
           potentialSavings,
-          recommendation: `Reduce ${category} spending by 20% to free up $${potentialSavings.toFixed(0)}/month`,
-          confidence: monthlyAverage > 500 ? 'HIGH' : monthlyAverage > 200 ? 'MEDIUM' : 'LOW'
+          recommendation: `Reduce ${category} spending by 20% to free up ${formatCurrencyWithCode(potentialSavings, baseCurrency, false)}/month`,
+          confidence: monthlyAverage > 500 ? 'HIGH' : monthlyAverage > 200 ? 'MEDIUM' : 'LOW',
+          currency: baseCurrency
         })
       }
     })
 
     return insights.sort((a, b) => b.potentialSavings - a.potentialSavings)
-  }, [completedStatements])
+  }, [completedStatements, baseCurrency, convert])
 
   const totalPotentialSavings = useMemo(() => 
     spendingInsights.reduce((sum, insight) => sum + insight.potentialSavings, 0),
@@ -102,25 +147,41 @@ export function BankStatementGoalIntegration({
     setIsGenerating(true)
     
     try {
-      const totalIncome = completedStatements.reduce((sum, s) => 
-        sum + (s.extractedData?.totalIncome || 0), 0) / completedStatements.length
-      const totalExpenses = completedStatements.reduce((sum, s) => 
-        sum + (s.extractedData?.totalExpenses || 0), 0) / completedStatements.length
+      const totalIncome = completedStatements.reduce((sum, s) => {
+        const income = s.extractedData?.totalIncome || 0
+        const currency = s.extractedData?.currency || 'USD'
+        return sum + convert(income, currency)
+      }, 0) / completedStatements.length
+      
+      const totalExpenses = completedStatements.reduce((sum, s) => {
+        const expenses = s.extractedData?.totalExpenses || 0
+        const currency = s.extractedData?.currency || 'USD'
+        return sum + convert(expenses, currency)
+      }, 0) / completedStatements.length
+
+      const currencySymbol = getCurrencySymbol(baseCurrency)
+      const currencyNote = hasMultipleCurrencies 
+        ? ` (converted to ${baseCurrency})` 
+        : ''
 
       const promptText = `You are a financial advisor analyzing spending patterns and goals.
 
-User's Financial Data:
-- Average Monthly Income: $${totalIncome.toFixed(0)}
-- Average Monthly Expenses: $${totalExpenses.toFixed(0)}
-- Potential Savings from Spending Optimization: $${totalPotentialSavings.toFixed(0)}/month
+User's Financial Data${currencyNote}:
+- Average Monthly Income: ${currencySymbol}${totalIncome.toFixed(0)}
+- Average Monthly Expenses: ${currencySymbol}${totalExpenses.toFixed(0)}
+- Potential Savings from Spending Optimization: ${currencySymbol}${totalPotentialSavings.toFixed(0)}/month
 
 Spending Insights:
-${spendingInsights.map(i => `- ${i.category}: $${i.monthlyAverage.toFixed(0)}/month (can save $${i.potentialSavings.toFixed(0)})`).join('\n')}
+${spendingInsights.map(i => `- ${i.category}: ${currencySymbol}${i.monthlyAverage.toFixed(0)}/month (can save ${currencySymbol}${i.potentialSavings.toFixed(0)})`).join('\n')}
 
 Goals Needing Attention:
-${goalsNeedingAttention.map(g => `- ${g.name}: $${g.currentAmount.toLocaleString()} of $${g.targetAmount.toLocaleString()} (${((g.currentAmount / g.targetAmount) * 100).toFixed(0)}% complete, target: ${new Date(g.targetDate).toLocaleDateString()})`).join('\n')}
+${goalsNeedingAttention.map(g => {
+  const goalCurrency = g.currency || 'USD'
+  const goalSymbol = g.currencySymbol || getCurrencySymbol(goalCurrency)
+  return `- ${g.name}: ${goalSymbol}${g.currentAmount.toLocaleString()} of ${goalSymbol}${g.targetAmount.toLocaleString()} (${((g.currentAmount / g.targetAmount) * 100).toFixed(0)}% complete, target: ${new Date(g.targetDate).toLocaleDateString()})`
+}).join('\n')}
 
-Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes.`
+Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes. Use ${currencySymbol} when mentioning amounts.`
 
       const response = await window.spark.llm(promptText, 'gpt-4o-mini')
       setAiInsights(response)
@@ -177,9 +238,16 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
             <CardTitle className="flex items-center gap-2">
               <Sparkle size={24} className="text-accent" />
               Spending-to-Goals Integration
+              {hasMultipleCurrencies && (
+                <Badge variant="outline" className="gap-1 text-xs">
+                  <CurrencyCircleDollar size={14} />
+                  {baseCurrency}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               AI-powered insights from {completedStatements.length} statement{completedStatements.length > 1 ? 's' : ''}
+              {hasMultipleCurrencies && ` (converted to ${baseCurrency})`}
             </CardDescription>
           </div>
           <Button
@@ -198,7 +266,7 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
                 <h4 className="font-semibold">Spending Optimization Opportunities</h4>
                 <Badge variant="secondary" className="gap-1">
                   <TrendUp size={14} />
-                  ${totalPotentialSavings.toFixed(0)}/mo potential
+                  {getCurrencySymbol(baseCurrency)}{totalPotentialSavings.toFixed(0)}/mo potential
                 </Badge>
               </div>
               
@@ -219,13 +287,13 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-2">
-                            Currently: ${insight.monthlyAverage.toFixed(0)}/month
+                            Currently: {formatCurrencyWithCode(insight.monthlyAverage, baseCurrency, false)}/month
                           </p>
                           <p className="text-sm">{insight.recommendation}</p>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold text-success">
-                            +${insight.potentialSavings.toFixed(0)}
+                            +{formatCurrencyWithCode(insight.potentialSavings, baseCurrency, false)}
                           </p>
                           <p className="text-xs text-muted-foreground">per month</p>
                         </div>
@@ -248,6 +316,7 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
                 {goalsNeedingAttention.map(goal => {
                   const suggestedIncrease = Math.min(totalPotentialSavings / goalsNeedingAttention.length, totalPotentialSavings)
                   const newContribution = goal.monthlyContribution + suggestedIncrease
+                  const goalSymbol = goal.currencySymbol || getCurrencySymbol(goal.currency || 'USD')
 
                   return (
                     <Card key={goal.id} className="border-primary/30">
@@ -256,10 +325,10 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
                           <div className="flex-1">
                             <p className="font-medium mb-1">{goal.name}</p>
                             <p className="text-sm text-muted-foreground mb-2">
-                              Currently contributing ${goal.monthlyContribution.toLocaleString()}/month
+                              Currently contributing {goalSymbol}{goal.monthlyContribution.toLocaleString()}/month
                             </p>
                             <p className="text-sm">
-                              Increase to <span className="font-semibold">${newContribution.toFixed(0)}/month</span> using optimized spending
+                              Increase to <span className="font-semibold">{getCurrencySymbol(baseCurrency)}{newContribution.toFixed(0)}/month</span> using optimized spending
                             </p>
                           </div>
                           <Button

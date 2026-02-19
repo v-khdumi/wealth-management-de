@@ -184,8 +184,8 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
 - **Functionality**: Upload bank statements for AI-powered extraction of financial data, spending insights, and comprehensive visualization
 - **Purpose**: Automatically incorporate external financial data to enhance wealth management analysis with detailed spending patterns and trends
 - **Trigger**: Navigate to "Upload" tab → Click upload area → Select PDF or image file
-- **Progression**: User uploads statement file (PDF/image, max 10MB) → File uploads with progress indicator → AI processes document with OCR → Extracts account details, balances, transactions, categories → Shows processing status → When complete, displays opening/closing balance, total income/expenses → Shows transaction list with auto-categorization → Generates spending breakdown by category with percentages → Views aggregated insights across all statements → Explores monthly trends visualization → Generates AI-powered spending insights → Exports data to CSV → Insights integrated into overall financial picture
-- **Success criteria**: ✓ Upload process is smooth and fast, ✓ AI accurately extracts key financial data through OCR simulation, ✓ categorization makes sense with realistic categories, ✓ spending breakdown is clear and actionable with pie and bar charts, ✓ monthly trends show income/expenses/net savings over time, ✓ AI insights are personalized and actionable based on spending data, ✓ CSV export functionality works for transaction data, ✓ extracted data integrates with existing financial view, ✓ supports PDF and image files, ✓ aggregated view provides comprehensive financial overview across multiple statements
+- **Progression**: User uploads statement file (PDF/image, max 10MB) → File uploads with progress indicator → AI processes document with OCR → Extracts account details, balances, transactions, categories → Shows processing status → When complete, displays opening/closing balance, total income/expenses → Shows transaction list with auto-categorization → Generates spending breakdown by category with percentages → Views aggregated insights across all statements → Explores monthly trends visualization → Generates AI-powered spending insights → Exports data to CSV → Deletes uploaded statements → Insights integrated into overall financial picture
+- **Success criteria**: ✓ Upload process is smooth and fast, ✓ AI accurately extracts key financial data through OCR simulation, ✓ categorization makes sense with realistic categories, ✓ spending breakdown is clear and actionable with pie and bar charts, ✓ monthly trends show income/expenses/net savings over time, ✓ AI insights are personalized and actionable based on spending data, ✓ CSV export functionality works for transaction data, ✓ extracted data integrates with existing financial view, ✓ supports PDF and image files, ✓ aggregated view provides comprehensive financial overview across multiple statements, ✓ Delete functionality removes statements with confirmation
 - **Implementation Notes**: 
   - Multiple statement support with aggregated analytics
   - Three-tab interface: Overview (spending summary), Trends (monthly charts), Transactions (detailed list)
@@ -194,6 +194,23 @@ This platform manages personalized portfolio tracking, goal planning, intelligen
   - Real-time CSV export with proper formatting
   - Status tracking: PROCESSING → COMPLETED/FAILED
   - Mock data fallback for demo purposes when AI unavailable
+  - Delete statements with confirmation dialog
+
+### Multi-Currency Bank Statement Analytics ✓ IMPLEMENTED
+- **Functionality**: View spending analytics across accounts in different currencies with automatic conversion and filtering capabilities
+- **Purpose**: Support global users who manage finances across multiple countries and currencies
+- **Trigger**: Upload statements in different currencies → Toggle currency conversion switch → Select base currency
+- **Progression**: Statements detected with multiple currencies (USD, EUR, RON, GBP, etc.) → System shows available currencies → User enables "Convert to Single Currency" toggle → Selects base currency from dropdown → AI fetches current exchange rates → All amounts automatically convert to base currency → View unified spending analytics → Filter by specific currency to analyze regional spending → Create currency-aware financial goals based on multi-currency patterns
+- **Success criteria**: ✓ Automatically detects currencies from uploaded statements, ✓ Supports 20+ major world currencies with proper symbols, ✓ Real-time exchange rate fetching via AI (with fallback to cached rates), ✓ Toggle between native currencies and converted view, ✓ Filter analytics by specific currency for regional analysis, ✓ Currency indicators show current base currency, ✓ All charts and aggregations respect currency conversion settings, ✓ Goals can be created with multi-currency context
+- **Implementation Notes**:
+  - Currency detection from extracted statement data
+  - Toggle switch for conversion mode
+  - Base currency selector with all supported currencies
+  - Filter dropdown to view specific currency statements only
+  - Exchange rate API via spark.llm with fallback defaults
+  - Currency symbols and names database (20+ currencies)
+  - Conversion calculations in aggregation logic
+  - Goals integration with spending patterns across currencies
 
 ## Edge Case Handling
 

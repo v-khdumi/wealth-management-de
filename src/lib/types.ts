@@ -227,6 +227,9 @@ export interface Goal {
   lifeEventType?: string
   optimizations?: GoalOptimization[]
   priority?: GoalPriority
+  currency?: string
+  currencySymbol?: string
+  basedOnCurrency?: string
 }
 
 export interface Portfolio {
