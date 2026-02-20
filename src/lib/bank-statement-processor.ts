@@ -27,9 +27,62 @@ export async function extractBankStatementData(
   }
 }
 
+const PRINTABLE_ASCII_START = 0x20
+const PRINTABLE_ASCII_END = 0x7e
+const LINE_FEED = 0x0a
+const CARRIAGE_RETURN = 0x0d
+const TAB = 0x09
+const MIN_RUN_LENGTH = 4
+const MIN_EXTRACTED_TEXT_LENGTH = 50
+const MAX_EXTRACTED_TEXT_LENGTH = 8000
+
+async function readFileAsText(file: File): Promise<string | null> {
+  try {
+    // For CSV, TXT, and other plaintext formats
+    if (
+      file.type.startsWith('text/') ||
+      file.name.match(/\.(csv|txt|tsv|json)$/i)
+    ) {
+      return await file.text()
+    }
+
+    // For PDF and other binary formats: read bytes and extract printable text
+    const buffer = await file.arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    // Extract sequences of printable ASCII / Latin-1 characters
+    let text = ''
+    let run = ''
+    for (let i = 0; i < bytes.length; i++) {
+      const c = bytes[i]
+      if (
+        (c >= PRINTABLE_ASCII_START && c <= PRINTABLE_ASCII_END) ||
+        c === LINE_FEED || c === CARRIAGE_RETURN || c === TAB
+      ) {
+        run += String.fromCharCode(c)
+      } else {
+        if (run.length >= MIN_RUN_LENGTH) text += run + ' '
+        run = ''
+      }
+    }
+    if (run.length >= MIN_RUN_LENGTH) text += run
+
+    // Clean up and limit size
+    const cleaned = text.replace(/\s{3,}/g, '  ').trim()
+    return cleaned.length >= MIN_EXTRACTED_TEXT_LENGTH
+      ? cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
+      : null
+  } catch (error) {
+    console.error('readFileAsText error:', error)
+    return null
+  }
+}
+
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
   const fileName = file.name.toLowerCase()
-  
+
+  // Try to read the actual file content for OCR/extraction
+  const fileContent = await readFileAsText(file)
+
   let detectedCurrency = ''
   let detectedSymbol = ''
   
@@ -86,14 +139,9 @@ The filename strongly suggests the currency is: ${detectedCurrency}
 MANDATORY CURRENCY RULES:
 1. The currency MUST be set to: ${detectedCurrency}
 2. The currency symbol MUST be set to: ${detectedSymbol}
-3. DO NOT change or override these currency values
-4. Generate amounts that are realistic for ${detectedCurrency}:
-   - RON (Romanian Leu): Salaries 8,000-15,000 RON, Groceries 200-800 RON, Rent 2,000-4,000 RON
-   - EUR (Euro): Salaries 2,000-4,000 EUR, Groceries 100-300 EUR, Rent 800-1,500 EUR
-   - USD (US Dollar): Salaries 3,000-6,000 USD, Groceries 200-500 USD, Rent 1,200-2,500 USD
-   - GBP (British Pound): Salaries 2,500-5,000 GBP, Groceries 150-400 GBP, Rent 1,000-2,000 GBP`
+3. DO NOT change or override these currency values`
     : `⚠️ IMPORTANT: AUTO-DETECT CURRENCY ⚠️
-The filename does not indicate a specific currency. You MUST detect the currency from the document content.
+Detect the currency from the document content.
 Look for: currency symbols (€, £, $, lei, RON, USD, EUR, GBP, etc.), language (Romanian → RON, English/US → USD, etc.),
 bank names, or transaction amounts to determine the correct currency.
 Romanian documents (e.g. "extras de cont", "BRD", "BCR", "Banca Transilvania", etc.) use RON (lei).
@@ -102,25 +150,30 @@ Set the currency and currencySymbol fields accordingly.`
   const exampleCurrency = detectedCurrency || 'USD'
   const exampleSymbol = detectedSymbol || '$'
 
+  const documentSection = fileContent
+    ? `\nDOCUMENT CONTENT (extracted from the uploaded file):\n---\n${fileContent}\n---\n\nIMPORTANT: Extract the real data from the document above. Use the actual account numbers, dates, transaction descriptions, and amounts from the document. Only fall back to reasonable estimates for fields that are genuinely missing from the document.`
+    : `\nNote: The document content could not be extracted automatically. Please infer realistic data from the filename "${file.name}" and the currency rules above.`
+
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
 
 ${currencyInstructionBlock}
+${documentSection}
 
-Extract and generate realistic bank statement data with the following information:
-- Account number (format: ****XXXX with 4 random digits)
-- Statement date (use current date: ${new Date().toISOString().split('T')[0]})
-- Opening balance (realistic for the detected currency)
-- Closing balance (realistic for the detected currency)
-- Generate 10-15 realistic transactions with:
+Extract the following information from the bank statement:
+- Account number (mask all but last 4 digits as ****XXXX)
+- Statement date
+- Opening balance
+- Closing balance
+- All transactions with:
   * Unique transaction IDs (format: tx-1, tx-2, etc.)
-  * Dates within the last 30 days
-  * Realistic merchant/description names
-  * Amounts appropriate for the currency
-  * Type: CREDIT (income) or DEBIT (expense)
+  * Date of each transaction
+  * Description / merchant name
+  * Amount (always positive)
+  * Type: CREDIT (income/deposit) or DEBIT (expense/withdrawal)
   * Category from: Salary, Groceries, Utilities, Dining, Transportation, Healthcare, Entertainment, Shopping, Bills, Transfers, Rent, Insurance, Housing
   * Running balance after each transaction
-- Calculate total income (sum of all CREDIT transactions)
-- Calculate total expenses (sum of all DEBIT transactions)
+- Total income (sum of all CREDIT transactions)
+- Total expenses (sum of all DEBIT transactions)
 
 Return ONLY a valid JSON object with this EXACT structure (no additional text):
 {

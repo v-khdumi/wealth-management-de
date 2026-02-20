@@ -181,9 +181,16 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
 
     const file = files[0]
     
-    if (!file.type.includes('pdf') && !file.type.includes('image')) {
+    const isValidFileType = (f: File) =>
+      f.type.includes('pdf') ||
+      f.type.includes('image') ||
+      f.type.includes('csv') ||
+      f.type.includes('text') ||
+      f.name.match(/\.(csv|txt|tsv)$/i) !== null
+
+    if (!isValidFileType(file)) {
       toast.error('Invalid file type', {
-        description: 'Please upload a PDF or image file'
+        description: 'Please upload a PDF, CSV, or image file'
       })
       return
     }
@@ -290,9 +297,104 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
   }
 
   const handleExportPDF = () => {
-    toast.info('PDF export feature', {
-      description: 'In production, this would generate a detailed PDF report'
-    })
+    if (!aggregatedData) {
+      toast.error('No data available to export')
+      return
+    }
+
+    const currency = aggregatedData.currencySymbol || aggregatedData.currency || '$'
+    const statementNames = statements
+      .filter(s => s.status === 'COMPLETED')
+      .map(s => s.fileName)
+      .join(', ')
+
+    const topCategories = aggregatedData.categorySummary
+      .slice(0, 10)
+      .map(c => `<tr>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee">${c.category}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right">${currency}${c.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right">${c.percentage.toFixed(1)}%</td>
+      </tr>`)
+      .join('')
+
+    const monthlyRows = aggregatedData.monthlyTrends
+      .map(m => `<tr>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee">${m.month}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right">${currency}${m.income.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right">${currency}${m.expenses.toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+        <td style="padding:6px 12px;border-bottom:1px solid #eee;text-align:right">${currency}${(m.income - m.expenses).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+      </tr>`)
+      .join('')
+
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toast.error('Could not open print window', { description: 'Please allow popups for this site' })
+      return
+    }
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bank Statement Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #222; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    h2 { font-size: 16px; margin: 24px 0 8px; border-bottom: 2px solid #333; padding-bottom: 4px; }
+    .meta { font-size: 12px; color: #666; margin-bottom: 24px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+    .summary-card { border: 1px solid #ddd; border-radius: 6px; padding: 12px; }
+    .summary-card .label { font-size: 11px; color: #888; text-transform: uppercase; }
+    .summary-card .value { font-size: 20px; font-weight: bold; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f5f5f5; padding: 8px 12px; text-align: left; font-size: 12px; text-transform: uppercase; color: #555; }
+    @media print { body { margin: 20px; } }
+  </style>
+</head>
+<body>
+  <h1>Financial Statement Report</h1>
+  <div class="meta">
+    Generated: ${new Date().toLocaleDateString()} &nbsp;|&nbsp;
+    Statements: ${statementNames || 'N/A'} &nbsp;|&nbsp;
+    Currency: ${aggregatedData.currency || 'USD'}
+  </div>
+
+  <h2>Summary</h2>
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">Total Income</div>
+      <div class="value" style="color:#16a34a">${currency}${aggregatedData.totalIncome.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Expenses</div>
+      <div class="value" style="color:#dc2626">${currency}${aggregatedData.totalExpenses.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Net Savings</div>
+      <div class="value" style="color:${aggregatedData.netSavings >= 0 ? '#16a34a' : '#dc2626'}">${currency}${aggregatedData.netSavings.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+    </div>
+  </div>
+
+  <h2>Spending by Category</h2>
+  <table>
+    <thead><tr><th>Category</th><th style="text-align:right">Amount</th><th style="text-align:right">% of Expenses</th></tr></thead>
+    <tbody>${topCategories}</tbody>
+  </table>
+
+  <h2>Monthly Trend</h2>
+  <table>
+    <thead><tr><th>Month</th><th style="text-align:right">Income</th><th style="text-align:right">Expenses</th><th style="text-align:right">Net</th></tr></thead>
+    <tbody>${monthlyRows}</tbody>
+  </table>
+
+  <p style="margin-top:32px;font-size:11px;color:#888">This report is based on uploaded bank statement data and is for informational purposes only. It does not constitute financial advice.</p>
+</body>
+</html>`)
+    printWindow.document.close()
+    printWindow.focus()
+    printWindow.print()
+
+    toast.success('PDF report opened for printing')
   }
 
   const handleDelete = (statementId: string, fileName: string) => {
@@ -363,7 +465,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,image/*"
+              accept=".pdf,.csv,.txt,.tsv,image/*"
               onChange={handleFileSelect}
               className="hidden"
             />
@@ -374,7 +476,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
               {isUploading ? 'Uploading...' : 'Upload Bank Statement'}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              PDF or image files up to 10MB
+              PDF, CSV, or image files up to 10MB
             </p>
             {isUploading && (
               <Progress value={45} className="w-full max-w-xs mx-auto" />

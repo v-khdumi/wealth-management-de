@@ -111,16 +111,43 @@ export function GoalAdjustmentDialog({
   const handleAIOptimize = async () => {
     setIsAIAnalyzing(true)
     
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    const optimized = Math.ceil(requiredMonthly * 1.05)
-    setNewContribution(optimized)
-    
-    toast.success('AI Optimization Complete', {
-      description: `Suggested $${optimized.toLocaleString()}/month with 5% buffer`,
-    })
-    
-    setIsAIAnalyzing(false)
+    try {
+      const promptText = `You are a financial planning AI. Analyze this savings goal and recommend an optimal monthly contribution.
+
+Goal Details:
+- Name: ${goal.name}
+- Type: ${goal.type}
+- Target Amount: $${goal.targetAmount.toLocaleString()}
+- Current Amount: $${goal.currentAmount.toLocaleString()}
+- Gap: $${gap.toLocaleString()}
+- Current Monthly Contribution: $${goal.monthlyContribution.toLocaleString()}
+- Required Monthly Contribution (to meet target): $${Math.ceil(requiredMonthly).toLocaleString()}
+- Months Remaining: ${monthsRemaining}
+- Target Date: ${goal.targetDate}
+
+Recommend an optimal monthly contribution that balances achieving the goal on time with financial sustainability.
+Consider a small buffer (5-10%) above the minimum required. 
+Respond with ONLY a JSON object: {"recommendedContribution": <number>, "reasoning": "<brief explanation>"}
+The recommendedContribution must be a whole number.`
+
+      const response = await window.spark.llm(promptText, 'gpt-4o-mini', true)
+      const result = JSON.parse(response)
+      const optimized = Math.ceil(result.recommendedContribution || requiredMonthly * 1.05)
+      setNewContribution(optimized)
+      
+      toast.success('AI Optimization Complete', {
+        description: result.reasoning || `Suggested $${optimized.toLocaleString()}/month`,
+      })
+    } catch (error) {
+      console.error('AI optimization error:', error)
+      const optimized = Math.ceil(requiredMonthly * 1.05)
+      setNewContribution(optimized)
+      toast.success('Optimization Complete', {
+        description: `Suggested $${optimized.toLocaleString()}/month with 5% buffer`,
+      })
+    } finally {
+      setIsAIAnalyzing(false)
+    }
   }
 
   return (
