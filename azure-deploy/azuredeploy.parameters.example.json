@@ -3,13 +3,16 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "appName": {
-      "value": "wealth-management-dashboard"
+      "value": "wealth-mgmt"
     },
     "location": {
       "value": "westeurope"
     },
+    "openAILocation": {
+      "value": "swedencentral"
+    },
     "sku": {
-      "value": "Free"
+      "value": "Standard"
     },
     "repositoryUrl": {
       "value": "https://github.com/v-khdumi/wealth-management-de"

@@ -29,22 +29,28 @@ az account set --subscription "<your-subscription-id>"
 # Create resource group
 az group create --name wealth-management-rg --location westeurope
 
-# Deploy using Bicep template
+# Deploy using Bicep template (provisions all required services)
 az deployment group create \
   --resource-group wealth-management-rg \
   --template-file azure-deploy/main.bicep \
-  --parameters appName=wealth-management-dashboard \
-               repositoryUrl=https://github.com/v-khdumi/wealth-management-de \
-               branch=main \
+  --parameters @azure-deploy/azuredeploy.parameters.example.json \
                repositoryToken=<your-github-pat>
 ```
+
+> **Note:** Copy `azure-deploy/azuredeploy.parameters.example.json` to `azure-deploy/azuredeploy.parameters.json` and fill in your values before running the command above.
 
 ### Required Azure Services
 | Service | SKU | Purpose |
 |---------|-----|---------|
-| Azure Static Web Apps | Free / Standard | Host the React SPA |
+| Azure Static Web Apps | Standard | Host the React SPA (Standard required for app settings & managed identity) |
+| Azure OpenAI | S0 | AI-powered insights, bank statement extraction (gpt-4o + gpt-4o-mini) |
+| Azure Cosmos DB | Serverless | Data persistence — bank statements, goals, portfolios |
+| Azure Blob Storage | Standard LRS | Bank statement file uploads |
+| Azure Key Vault | Standard | Secrets management (OpenAI keys, Cosmos DB keys, Storage connection strings) |
 | (Optional) Azure CDN | Standard Microsoft | Global edge caching |
 | (Optional) Azure Monitor | Pay-as-you-go | Application insights |
+
+> **Azure OpenAI region:** Not all regions support Azure OpenAI. The Bicep template defaults to `swedencentral`. See the `openAILocation` parameter for supported regions.
 
 ---
 
