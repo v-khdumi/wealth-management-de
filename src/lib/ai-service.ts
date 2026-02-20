@@ -110,6 +110,7 @@ function buildClientFactsPacket(
 
 function buildPortfolioFactsPacket(
   client: User,
+  profile: ClientProfile | undefined,
   riskProfile: RiskProfile,
   portfolio: Portfolio,
   holdings: Holding[],
@@ -120,24 +121,31 @@ function buildPortfolioFactsPacket(
   const model = getRecommendedModel(riskProfile.score, modelPortfolios)
   const drift = model ? calculateDrift(allocations, model) : 0
 
-  const holdingDetails = holdings.map(h => {
-    const instrument = instruments.find(i => i.id === h.instrumentId)!
+  const age = profile
+    ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+    : 0
+  const segment = profile?.segment || ''
+
+  const holdingDetails = holdings.reduce<NonNullable<FactsPacket['holdings']>>((acc, h) => {
+    const instrument = instruments.find(i => i.id === h.instrumentId)
+    if (!instrument) return acc
     const value = h.quantity * instrument.currentPrice
-    return {
+    acc.push({
       symbol: instrument.symbol,
       name: instrument.name,
       quantity: h.quantity,
       value,
       percentage: (value / portfolio.totalValue) * 100,
-    }
-  })
+    })
+    return acc
+  }, [])
 
   return {
     client: {
       name: client.name,
-      age: 0,
-      segment: '',
-      onboardingDate: '',
+      age,
+      segment,
+      onboardingDate: profile?.onboardingDate || '',
     },
     riskProfile: {
       score: riskProfile.score,
@@ -259,13 +267,14 @@ Your tone should be professional and advisor-focused.`
 
 export async function generatePortfolioExplanation(
   client: User,
+  profile: ClientProfile | undefined,
   riskProfile: RiskProfile,
   portfolio: Portfolio,
   holdings: Holding[],
   instruments: Instrument[],
   modelPortfolios: ModelPortfolio[]
 ): Promise<AiResponse> {
-  const facts = buildPortfolioFactsPacket(client, riskProfile, portfolio, holdings, instruments, modelPortfolios)
+  const facts = buildPortfolioFactsPacket(client, profile, riskProfile, portfolio, holdings, instruments, modelPortfolios)
   
   const systemPrompt = `You are an AI assistant helping a client understand their investment portfolio.
 Explain their allocation, how it compares to their recommended model, and key considerations.

@@ -32,6 +32,7 @@ export function PortfolioView({ clientId }: PortfolioViewProps) {
   const { currentUser } = useAuth()
   const {
     users,
+    clientProfiles,
     portfolios,
     holdings,
     instruments,
@@ -44,6 +45,7 @@ export function PortfolioView({ clientId }: PortfolioViewProps) {
   const [explanation, setExplanation] = useState<string | null>(null)
 
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
+  const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
   const portfolio = useMemo(() => (portfolios || []).find(p => p.clientId === clientId), [portfolios, clientId])
   const riskProfile = useMemo(() => (riskProfiles || []).find(rp => rp.clientId === clientId), [riskProfiles, clientId])
   const portfolioHoldings = useMemo(() => (holdings || []).filter(h => h.portfolioId === portfolio?.id), [holdings, portfolio])
@@ -76,6 +78,7 @@ export function PortfolioView({ clientId }: PortfolioViewProps) {
     try {
       const response = await generatePortfolioExplanation(
         client,
+        profile,
         riskProfile,
         portfolio,
         portfolioHoldings,

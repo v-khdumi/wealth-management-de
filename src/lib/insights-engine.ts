@@ -120,13 +120,16 @@ function buildComprehensiveFactsPacket(
   const model = getRecommendedModel(riskProfile.score, modelPortfolios)
   const drift = model ? calculateDrift(allocations, model) : 0
 
-  const holdingDetails = holdings.map(h => {
-    const instrument = instruments.find(i => i.id === h.instrumentId)!
+  const holdingDetails = holdings.reduce<ComprehensiveFactsPacket['holdings']>((acc, h) => {
+    const instrument = instruments.find(i => i.id === h.instrumentId)
+    if (!instrument) return acc
     const value = h.quantity * instrument.currentPrice
     const gain = value - h.quantity * h.averageCost
-    const gainPercentage = ((instrument.currentPrice - h.averageCost) / h.averageCost) * 100
+    const gainPercentage = h.averageCost > 0
+      ? ((instrument.currentPrice - h.averageCost) / h.averageCost) * 100
+      : 0
 
-    return {
+    acc.push({
       symbol: instrument.symbol,
       name: instrument.name,
       assetClass: instrument.assetClass,
@@ -135,8 +138,9 @@ function buildComprehensiveFactsPacket(
       percentage: (value / portfolio.totalValue) * 100,
       gain,
       gainPercentage,
-    }
-  })
+    })
+    return acc
+  }, [])
 
   const goalsData = goals.map(g => {
     const gap = calculateGoalGap(g)
@@ -397,17 +401,31 @@ export async function generatePersonalizedInsights(
   modelPortfolios: ModelPortfolio[],
   nextBestActions: NextBestAction[]
 ): Promise<InsightsResponse> {
-  const facts = buildComprehensiveFactsPacket(
-    client,
-    profile,
-    riskProfile,
-    portfolio,
-    goals,
-    holdings,
-    instruments,
-    modelPortfolios,
-    nextBestActions
-  )
-
-  return callAIForInsights(facts)
+  try {
+    const facts = buildComprehensiveFactsPacket(
+      client,
+      profile,
+      riskProfile,
+      portfolio,
+      goals,
+      holdings,
+      instruments,
+      modelPortfolios,
+      nextBestActions
+    )
+    return callAIForInsights(facts)
+  } catch (error) {
+    console.error('Failed to build facts packet, using minimal offline response:', error)
+    const minimalFacts: ComprehensiveFactsPacket = {
+      client: { name: client.name, age: 0, segment: profile.segment, memberSince: profile.onboardingDate },
+      riskProfile: { score: riskProfile.score, category: riskProfile.category, lastUpdated: riskProfile.lastUpdated, daysOld: 0, isStale: false },
+      portfolio: { totalValue: portfolio.totalValue, cash: portfolio.cash, cashPercentage: (portfolio.cash / portfolio.totalValue) * 100, holdingsCount: 0 },
+      allocations: [],
+      goals: [],
+      holdings: [],
+      nextBestActions: [],
+      healthMetrics: { portfolioHealthScore: 70, goalsOnTrack: 0, goalsNeedingAttention: 0, goalsCritical: 0, highPriorityActions: 0, mediumPriorityActions: 0 },
+    }
+    return generateOfflineInsights(minimalFacts)
+  }
 }
