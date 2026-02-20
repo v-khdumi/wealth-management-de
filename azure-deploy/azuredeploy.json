@@ -1,0 +1,435 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.40.2.10011",
+      "templateHash": "7862078216670336915"
+    }
+  },
+  "parameters": {
+    "appName": {
+      "type": "string",
+      "defaultValue": "wealth-mgmt",
+      "metadata": {
+        "description": "Base name for all resources (2-20 chars, lowercase letters and hyphens)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure region for most resources"
+      }
+    },
+    "openAILocation": {
+      "type": "string",
+      "defaultValue": "swedencentral",
+      "allowedValues": [
+        "eastus",
+        "eastus2",
+        "swedencentral",
+        "westeurope",
+        "francecentral",
+        "uksouth",
+        "northcentralus",
+        "australiaeast",
+        "canadaeast",
+        "japaneast"
+      ],
+      "metadata": {
+        "description": "Azure region for Azure OpenAI (must have Azure OpenAI quota; not all regions support it)"
+      }
+    },
+    "sku": {
+      "type": "string",
+      "defaultValue": "Standard",
+      "allowedValues": [
+        "Free",
+        "Standard"
+      ],
+      "metadata": {
+        "description": "SKU for the Static Web App (Standard required for app settings and managed identity)"
+      }
+    },
+    "repositoryUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "GitHub repository URL (e.g. https://github.com/<owner>/<repo>)"
+      }
+    },
+    "branch": {
+      "type": "string",
+      "defaultValue": "main",
+      "metadata": {
+        "description": "GitHub branch to deploy from"
+      }
+    },
+    "repositoryToken": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "GitHub personal access token (for automatic CI/CD setup)"
+      }
+    }
+  },
+  "variables": {
+    "openAIAccountName": "[format('{0}-openai', parameters('appName'))]",
+    "cosmosAccountName": "[format('{0}-cosmos', parameters('appName'))]",
+    "storageAccountName": "[take(format('{0}storage', replace(toLower(parameters('appName')), '-', '')), 24)]",
+    "keyVaultName": "[take(format('{0}-kv', parameters('appName')), 24)]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Web/staticSites",
+      "apiVersion": "2022-09-01",
+      "name": "[parameters('appName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('sku')]",
+        "tier": "[parameters('sku')]"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "repositoryUrl": "[parameters('repositoryUrl')]",
+        "branch": "[parameters('branch')]",
+        "repositoryToken": "[parameters('repositoryToken')]",
+        "buildProperties": {
+          "appLocation": "/",
+          "outputLocation": "dist",
+          "appBuildCommand": "npm run build"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[variables('openAIAccountName')]",
+      "location": "[parameters('openAILocation')]",
+      "sku": {
+        "name": "S0"
+      },
+      "kind": "OpenAI",
+      "properties": {
+        "publicNetworkAccess": "Enabled",
+        "customSubDomainName": "[variables('openAIAccountName')]"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[format('{0}/{1}', variables('openAIAccountName'), 'gpt-4o-mini')]",
+      "sku": {
+        "name": "Standard",
+        "capacity": 30
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o-mini",
+          "version": "2024-07-18"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName'))]"
+      ],
+      "metadata": {
+        "description": "GPT-4o-mini deployment — used for bank statement extraction and general AI insights"
+      }
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/deployments",
+      "apiVersion": "2023-10-01-preview",
+      "name": "[format('{0}/{1}', variables('openAIAccountName'), 'gpt-4o')]",
+      "sku": {
+        "name": "Standard",
+        "capacity": 10
+      },
+      "properties": {
+        "model": {
+          "format": "OpenAI",
+          "name": "gpt-4o",
+          "version": "2024-08-06"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('openAIAccountName'), 'gpt-4o-mini')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName'))]"
+      ],
+      "metadata": {
+        "description": "GPT-4o deployment — used for detailed bank statement document analysis"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2023-11-15",
+      "name": "[variables('cosmosAccountName')]",
+      "location": "[parameters('location')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": false
+          }
+        ],
+        "capabilities": [
+          {
+            "name": "EnableServerless"
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}', variables('cosmosAccountName'), 'wealth-management')]",
+      "properties": {
+        "resource": {
+          "id": "wealth-management"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}/{2}', variables('cosmosAccountName'), 'wealth-management', 'bank-statements')]",
+      "properties": {
+        "resource": {
+          "id": "bank-statements",
+          "partitionKey": {
+            "paths": [
+              "/userId"
+            ],
+            "kind": "Hash"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), 'wealth-management')]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}/{2}', variables('cosmosAccountName'), 'wealth-management', 'goals')]",
+      "properties": {
+        "resource": {
+          "id": "goals",
+          "partitionKey": {
+            "paths": [
+              "/clientId"
+            ],
+            "kind": "Hash"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), 'wealth-management')]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}/{2}', variables('cosmosAccountName'), 'wealth-management', 'portfolios')]",
+      "properties": {
+        "resource": {
+          "id": "portfolios",
+          "partitionKey": {
+            "paths": [
+              "/clientId"
+            ],
+            "kind": "Hash"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), 'wealth-management')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[variables('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "supportsHttpsTrafficOnly": true,
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/{1}', variables('storageAccountName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/{1}/{2}', variables('storageAccountName'), 'default', 'bank-statements')]",
+      "properties": {
+        "publicAccess": "None"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices', variables('storageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 7
+      }
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+      "name": "[guid(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), resourceId('Microsoft.Web/staticSites', parameters('appName')), '4633458b-17de-408a-b874-0445c86b69e6')]",
+      "properties": {
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+        "principalId": "[reference(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01', 'full').identity.principalId]",
+        "principalType": "ServicePrincipal"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'openai-api-key')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName')), '2023-10-01-preview').key1]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'cosmos-primary-key')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName')), '2023-11-15').primaryMasterKey]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-connection-string')]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', variables('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/staticSites/config",
+      "apiVersion": "2022-09-01",
+      "name": "[format('{0}/{1}', parameters('appName'), 'appsettings')]",
+      "properties": {
+        "AZURE_OPENAI_ENDPOINT": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName')), '2023-10-01-preview').endpoint]",
+        "AZURE_OPENAI_DEPLOYMENT_GPT4O": "gpt-4o",
+        "AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI": "gpt-4o-mini",
+        "AZURE_OPENAI_API_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/openai-api-key/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
+        "COSMOS_DB_ENDPOINT": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName')), '2023-11-15').documentEndpoint]",
+        "COSMOS_DB_DATABASE": "wealth-management",
+        "COSMOS_DB_KEY": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/cosmos-primary-key/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
+        "STORAGE_ACCOUNT_NAME": "[variables('storageAccountName')]",
+        "STORAGE_CONTAINER_BANK_STATEMENTS": "bank-statements",
+        "STORAGE_CONNECTION_STRING": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/storage-connection-string/)', reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri)]",
+        "KEY_VAULT_URI": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/blobServices/containers', variables('storageAccountName'), 'default', 'bank-statements')]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName'))]",
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosAccountName'), 'wealth-management')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('openAIAccountName'), 'gpt-4o')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('openAIAccountName'), 'gpt-4o-mini')]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName'))]",
+        "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "staticWebAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01').defaultHostname)]"
+    },
+    "staticWebAppId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]"
+    },
+    "deploymentToken": {
+      "type": "string",
+      "value": "[listSecrets(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01').properties.apiKey]"
+    },
+    "openAIEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName')), '2023-10-01-preview').endpoint]"
+    },
+    "openAIDeploymentGpt4o": {
+      "type": "string",
+      "value": "gpt-4o"
+    },
+    "openAIDeploymentGpt4oMini": {
+      "type": "string",
+      "value": "gpt-4o-mini"
+    },
+    "cosmosEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosAccountName')), '2023-11-15').documentEndpoint]"
+    },
+    "cosmosDatabase": {
+      "type": "string",
+      "value": "wealth-management"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[variables('storageAccountName')]"
+    }
+  }
+}
