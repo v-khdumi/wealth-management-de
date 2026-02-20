@@ -303,9 +303,12 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2022-09-01' = {
 }
 
 // ─── Outputs ──────────────────────────────────────────────────────────────────
+// Note: The Static Web App deployment token is intentionally NOT included as an output to
+// avoid exposing secrets in deployment history. Retrieve it after deployment via:
+//   Azure Portal → Static Web App → Overview → Manage deployment token
+//   OR: az staticwebapp secrets list --name <appName> --resource-group <rg>
 output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
 output staticWebAppId string = staticWebApp.id
-output deploymentToken string = staticWebApp.listSecrets().properties.apiKey
 output openAIEndpoint string = openAI.properties.endpoint
 output openAIDeploymentGpt4o string = gpt4oDeployment.name
 output openAIDeploymentGpt4oMini string = gpt4oMiniDeployment.name

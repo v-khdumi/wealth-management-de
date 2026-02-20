@@ -12,6 +12,12 @@ Click the **Deploy to Azure** button above. You'll need:
 - A resource group (or create one)
 - Your GitHub repository URL and a [Personal Access Token](https://github.com/settings/tokens) with `repo` scope
 
+After deployment completes, retrieve the **Static Web App deployment token** to configure GitHub Actions CI/CD:
+- **Azure Portal**: Go to your Static Web App → Overview → **Manage deployment token**
+- **Azure CLI**: `az staticwebapp secrets list --name <appName> --resource-group <rg>`
+
+Add the token as a GitHub secret named `AZURE_STATIC_WEB_APPS_API_TOKEN` to enable automatic deployments on push.
+
 ### Option 2 — GitHub Actions (Recommended for CI/CD)
 1. Create an **Azure Static Web App** in the Azure Portal:
    - Go to [portal.azure.com](https://portal.azure.com) → Create Resource → Static Web App

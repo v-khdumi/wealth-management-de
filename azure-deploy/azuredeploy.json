@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "7862078216670336915"
+      "templateHash": "14949112525748733941"
     }
   },
   "parameters": {
@@ -398,10 +398,6 @@
     "staticWebAppId": {
       "type": "string",
       "value": "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]"
-    },
-    "deploymentToken": {
-      "type": "string",
-      "value": "[listSecrets(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01').properties.apiKey]"
     },
     "openAIEndpoint": {
       "type": "string",
