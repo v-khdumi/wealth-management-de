@@ -50,7 +50,7 @@ export const SEED_CLIENT_PROFILES: ClientProfile[] = [
   { id: 'cp-11', userId: 'cli-11', advisorId: 'adv-3', dateOfBirth: '1983-06-21', phone: '555-0111', address: '852 Poplar St, Dallas, TX', segment: 'Mass Affluent', onboardingDate: '2021-05-17' },
   { id: 'cp-12', userId: 'cli-12', advisorId: 'adv-3', dateOfBirth: '1992-01-09', phone: '555-0112', address: '963 Fir Pl, Nashville, TN', segment: 'Emerging Wealth', onboardingDate: '2023-01-10' },
   
-  { id: 'cp-blank', userId: 'cli-blank', advisorId: 'adv-1', dateOfBirth: '1995-01-01', phone: '555-0000', address: 'Test Address', segment: 'New User', onboardingDate: new Date().toISOString().split('T')[0] },
+  { id: 'cp-blank', userId: 'cli-blank', advisorId: 'adv-1', dateOfBirth: '', phone: '', address: '', segment: '', onboardingDate: new Date().toISOString().split('T')[0] },
 ]
 
 export const SEED_RISK_PROFILES: RiskProfile[] = [

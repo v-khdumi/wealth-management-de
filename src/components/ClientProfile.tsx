@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -62,6 +64,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const {
     users,
     clientProfiles,
+    setClientProfiles,
     riskProfiles,
     goals,
     portfolios,
@@ -86,6 +89,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showCustomGoalDialog, setShowCustomGoalDialog] = useState(false)
   const [showComparisonView, setShowComparisonView] = useState(false)
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [profileDraft, setProfileDraft] = useState<{ dateOfBirth: string; phone: string; address: string } | null>(null)
   const [celebrationData, setCelebrationData] = useState<{
     goalName: string
     percentage: number
@@ -105,11 +110,36 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
   const userCurrency = useUserCurrency(clientId, bankStatements || [])
 
-  const age = profile ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25)) : 0
+  const age = profile?.dateOfBirth
+    ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
+    : null
   const riskStale = riskProfile ? isRiskProfileStale(riskProfile) : false
   const totalGoalsProgress = clientGoals.length > 0
     ? clientGoals.reduce((sum, g) => sum + (g.currentAmount / g.targetAmount) * 100, 0) / clientGoals.length
     : 0
+
+  const handleStartEditProfile = () => {
+    setProfileDraft({
+      dateOfBirth: profile?.dateOfBirth || '',
+      phone: profile?.phone || '',
+      address: profile?.address || '',
+    })
+    setIsEditingProfile(true)
+  }
+
+  const handleSaveProfile = () => {
+    if (!profile || !profileDraft) return
+    setClientProfiles((current) =>
+      (current || []).map((cp) =>
+        cp.userId === clientId
+          ? { ...cp, ...profileDraft }
+          : cp
+      )
+    )
+    setIsEditingProfile(false)
+    setProfileDraft(null)
+    toast.success('Profile updated!', { description: 'Your personal information has been saved.' })
+  }
 
   const checkMilestones = (goal: Goal) => {
     const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
@@ -630,40 +660,42 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 lg:grid-cols-8 w-full gap-1">
-              <TabsTrigger value="overview" className="gap-2">
-                <UserIcon size={16} />
-                <span className="hidden lg:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="insights" className="gap-2">
-                <Lightbulb size={16} />
-                <span className="hidden lg:inline">Insights</span>
-              </TabsTrigger>
-              <TabsTrigger value="portfolio" className="gap-2">
-                <ChartLine size={16} />
-                <span className="hidden lg:inline">Portfolio</span>
-              </TabsTrigger>
-              <TabsTrigger value="multi-currency" className="gap-2">
-                <CurrencyCircleDollar size={16} />
-                <span className="hidden lg:inline">Multi-Currency</span>
-              </TabsTrigger>
-              <TabsTrigger value="goals" className="gap-2">
-                <Target size={16} />
-                <span className="hidden lg:inline">Goals</span>
-              </TabsTrigger>
-              <TabsTrigger value="budgets" className="gap-2">
-                <Wallet size={16} />
-                <span className="hidden lg:inline">Budgets</span>
-              </TabsTrigger>
-              <TabsTrigger value="upload" className="gap-2">
-                <UploadSimple size={16} />
-                <span className="hidden lg:inline">Upload</span>
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="gap-2">
-                <ClockCounterClockwise size={16} />
-                <span className="hidden lg:inline">Activity</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-1">
+              <TabsList className="flex w-max min-w-full gap-1 h-auto p-1">
+                <TabsTrigger value="overview" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <UserIcon size={15} />
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="insights" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <Lightbulb size={15} />
+                  Insights
+                </TabsTrigger>
+                <TabsTrigger value="portfolio" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <ChartLine size={15} />
+                  Portfolio
+                </TabsTrigger>
+                <TabsTrigger value="multi-currency" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <CurrencyCircleDollar size={15} />
+                  Multi-Currency
+                </TabsTrigger>
+                <TabsTrigger value="goals" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <Target size={15} />
+                  Goals
+                </TabsTrigger>
+                <TabsTrigger value="budgets" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <Wallet size={15} />
+                  Budgets
+                </TabsTrigger>
+                <TabsTrigger value="upload" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <UploadSimple size={15} />
+                  Upload
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="flex items-center gap-1.5 px-3 py-2 text-sm whitespace-nowrap">
+                  <ClockCounterClockwise size={15} />
+                  Activity
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="overview" className="space-y-6 mt-6">
               <Card>
@@ -672,24 +704,85 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                     <UserIcon size={24} />
                     Personal Information
                   </CardTitle>
+                  {!isEditingProfile && (
+                    <Button variant="outline" size="sm" className="w-fit gap-2 mt-2" onClick={handleStartEditProfile}>
+                      <PencilSimple size={15} />
+                      Edit Profile
+                    </Button>
+                  )}
                 </CardHeader>
-                <CardContent className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{client.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Age</p>
-                    <p className="font-medium">{age} years</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{profile?.phone || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Member Since</p>
-                    <p className="font-medium">{profile?.onboardingDate ? new Date(profile.onboardingDate).toLocaleDateString() : 'N/A'}</p>
-                  </div>
+                <CardContent>
+                  {isEditingProfile && profileDraft ? (
+                    <div className="space-y-4">
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="dob">Date of Birth</Label>
+                          <Input
+                            id="dob"
+                            type="date"
+                            value={profileDraft.dateOfBirth}
+                            onChange={(e) => setProfileDraft(d => d ? { ...d, dateOfBirth: e.target.value } : d)}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="phone">Phone</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            placeholder="e.g. +40 7xx xxx xxx"
+                            value={profileDraft.phone}
+                            onChange={(e) => setProfileDraft(d => d ? { ...d, phone: e.target.value } : d)}
+                          />
+                        </div>
+                        <div className="sm:col-span-2 space-y-1.5">
+                          <Label htmlFor="address">Address</Label>
+                          <Input
+                            id="address"
+                            placeholder="Your home address"
+                            value={profileDraft.address}
+                            onChange={(e) => setProfileDraft(d => d ? { ...d, address: e.target.value } : d)}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button onClick={handleSaveProfile} className="gap-2">
+                          Save Changes
+                        </Button>
+                        <Button variant="outline" onClick={() => { setIsEditingProfile(false); setProfileDraft(null) }}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="font-medium">{client.email}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Age</p>
+                        <p className="font-medium">
+                          {age !== null ? `${age} years` : <span className="text-muted-foreground italic text-sm">Not set — click Edit Profile</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Phone</p>
+                        <p className="font-medium">
+                          {profile?.phone || <span className="text-muted-foreground italic text-sm">Not set</span>}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Member Since</p>
+                        <p className="font-medium">{profile?.onboardingDate ? new Date(profile.onboardingDate).toLocaleDateString() : 'N/A'}</p>
+                      </div>
+                      {profile?.address && (
+                        <div className="sm:col-span-2">
+                          <p className="text-sm text-muted-foreground">Address</p>
+                          <p className="font-medium">{profile.address}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1058,7 +1151,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         onOpenChange={setShowTemplateDialog}
         onSelectTemplate={handleCreateGoalFromTemplate}
         onCreateCustom={() => setShowCustomGoalDialog(true)}
-        userAge={age}
+        userAge={age ?? 0}
         userRiskScore={riskProfile?.score || 5}
       />
 

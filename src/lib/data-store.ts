@@ -31,7 +31,7 @@ import {
 } from './seed-data'
 
 const INITIAL_SEED_DATA = generateSeedData()
-const DATA_VERSION = '1.2'
+const DATA_VERSION = '1.3'
 
 export function useDataStore() {
   const [dataVersion, setDataVersion] = useKV<string>('data_version', DATA_VERSION)
@@ -75,6 +75,7 @@ export function useDataStore() {
   return {
     users,
     clientProfiles,
+    setClientProfiles,
     riskProfiles,
     setRiskProfiles,
     goals,

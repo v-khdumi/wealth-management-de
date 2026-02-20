@@ -30,10 +30,21 @@ export async function extractBankStatementData(
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
   const fileName = file.name.toLowerCase()
   
-  let detectedCurrency = 'USD'
-  let detectedSymbol = '$'
+  let detectedCurrency = ''
+  let detectedSymbol = ''
   
-  if (fileName.includes('ron') || fileName.includes('romania') || fileName.includes('lei') || fileName.includes('leu')) {
+  // Romanian bank names and keywords
+  if (
+    fileName.includes('ron') || fileName.includes('romania') ||
+    fileName.includes('lei') || fileName.includes('leu') ||
+    fileName.includes('brd') || fileName.includes('bcr') ||
+    fileName.includes('banca-transilvania') || fileName.includes('bancatransilvania') ||
+    fileName.includes('bt_') || fileName.includes('_bt') ||
+    fileName.includes('raiffeisen') || fileName.includes('ing-ro') ||
+    fileName.includes('unicredit-ro') || fileName.includes('alpha-bank') ||
+    fileName.includes('extras') || fileName.includes('cont_curent') ||
+    fileName.includes('extras_de_cont')
+  ) {
     detectedCurrency = 'RON'
     detectedSymbol = 'lei'
   } else if (fileName.includes('eur') || fileName.includes('euro')) {
@@ -63,12 +74,14 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   } else if (fileName.includes('huf') || fileName.includes('hungary') || fileName.includes('forint')) {
     detectedCurrency = 'HUF'
     detectedSymbol = 'Ft'
+  } else if (fileName.includes('usd') || fileName.includes('dollar')) {
+    detectedCurrency = 'USD'
+    detectedSymbol = '$'
   }
 
-  const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
-
-⚠️ CRITICAL: CURRENCY DETECTION REQUIREMENTS ⚠️
-The filename suggests the currency is: ${detectedCurrency}
+  const currencyInstructionBlock = detectedCurrency
+    ? `⚠️ CRITICAL: CURRENCY DETECTION REQUIREMENTS ⚠️
+The filename strongly suggests the currency is: ${detectedCurrency}
 
 MANDATORY CURRENCY RULES:
 1. The currency MUST be set to: ${detectedCurrency}
@@ -78,13 +91,26 @@ MANDATORY CURRENCY RULES:
    - RON (Romanian Leu): Salaries 8,000-15,000 RON, Groceries 200-800 RON, Rent 2,000-4,000 RON
    - EUR (Euro): Salaries 2,000-4,000 EUR, Groceries 100-300 EUR, Rent 800-1,500 EUR
    - USD (US Dollar): Salaries 3,000-6,000 USD, Groceries 200-500 USD, Rent 1,200-2,500 USD
-   - GBP (British Pound): Salaries 2,500-5,000 GBP, Groceries 150-400 GBP, Rent 1,000-2,000 GBP
+   - GBP (British Pound): Salaries 2,500-5,000 GBP, Groceries 150-400 GBP, Rent 1,000-2,000 GBP`
+    : `⚠️ IMPORTANT: AUTO-DETECT CURRENCY ⚠️
+The filename does not indicate a specific currency. You MUST detect the currency from the document content.
+Look for: currency symbols (€, £, $, lei, RON, USD, EUR, GBP, etc.), language (Romanian → RON, English/US → USD, etc.),
+bank names, or transaction amounts to determine the correct currency.
+Romanian documents (e.g. "extras de cont", "BRD", "BCR", "Banca Transilvania", etc.) use RON (lei).
+Set the currency and currencySymbol fields accordingly.`
+
+  const exampleCurrency = detectedCurrency || 'USD'
+  const exampleSymbol = detectedSymbol || '$'
+
+  const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
+
+${currencyInstructionBlock}
 
 Extract and generate realistic bank statement data with the following information:
 - Account number (format: ****XXXX with 4 random digits)
 - Statement date (use current date: ${new Date().toISOString().split('T')[0]})
-- Opening balance (realistic for currency)
-- Closing balance (realistic for currency)
+- Opening balance (realistic for the detected currency)
+- Closing balance (realistic for the detected currency)
 - Generate 10-15 realistic transactions with:
   * Unique transaction IDs (format: tx-1, tx-2, etc.)
   * Dates within the last 30 days
@@ -104,8 +130,8 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
   "closingBalance": 6500,
   "totalIncome": 8000,
   "totalExpenses": 6500,
-  "currency": "${detectedCurrency}",
-  "currencySymbol": "${detectedSymbol}",
+  "currency": "${exampleCurrency}",
+  "currencySymbol": "${exampleSymbol}",
   "transactions": [
     {
       "id": "tx-1",
@@ -126,9 +152,7 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
       "balance": 12750
     }
   ]
-}
-
-REMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MUST be "${detectedSymbol}". Do not change these values.`
+}${detectedCurrency ? `\n\nREMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MUST be "${detectedSymbol}". Do not change these values.` : '\n\nREMINDER: Detect the currency from the document content and set the currency and currencySymbol fields correctly.'}`
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
@@ -159,6 +183,10 @@ REMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MU
 
     categorySummary.sort((a, b) => b.amount - a.amount)
 
+    // Use AI-detected currency if we didn't detect from filename
+    const finalCurrency = detectedCurrency || data.currency || 'USD'
+    const finalSymbol = detectedSymbol || data.currencySymbol || '$'
+
     return {
       accountNumber: data.accountNumber || '****0000',
       statementDate: data.statementDate || new Date().toISOString().split('T')[0],
@@ -168,12 +196,12 @@ REMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MU
       totalExpenses: data.totalExpenses || 0,
       transactions: data.transactions || [],
       categorySummary,
-      currency: detectedCurrency,
-      currencySymbol: detectedSymbol,
+      currency: finalCurrency,
+      currencySymbol: finalSymbol,
     }
   } catch (error) {
     console.error('AI extraction failed, using mock data:', error)
-    return generateMockStatementData(detectedCurrency, detectedSymbol)
+    return generateMockStatementData(detectedCurrency || 'USD', detectedSymbol || '$')
   }
 }
 

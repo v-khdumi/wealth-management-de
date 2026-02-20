@@ -98,7 +98,7 @@ export function AIAssistant({ clientId }: AIAssistantProps) {
       </CardHeader>
       <CardContent className="p-0">
         <div className="p-6 space-y-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2">
             {quickPrompts.map((prompt, idx) => (
               <Button
                 key={idx}
@@ -106,7 +106,7 @@ export function AIAssistant({ clientId }: AIAssistantProps) {
                 size="sm"
                 onClick={() => handleAskQuestion(prompt)}
                 disabled={isLoading}
-                className="text-xs"
+                className="text-xs justify-start text-left h-auto py-2 px-3"
               >
                 {prompt}
               </Button>
