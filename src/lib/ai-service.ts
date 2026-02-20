@@ -9,6 +9,7 @@ import type {
   ModelPortfolio,
   AiInteraction,
   Order,
+  BankStatement,
 } from './types'
 import { calculatePortfolioAllocations, getRecommendedModel, calculateDrift } from './business-logic'
 
@@ -324,5 +325,246 @@ export function createAiInteractionRecord(
     createdAt: new Date().toISOString(),
     offlineMode: response.offlineMode,
     metadata: { sources: response.sources },
+  }
+}
+
+export interface BankStatementNextAction {
+  id: string
+  priority: 'HIGH' | 'MEDIUM' | 'LOW'
+  type: 'RISK_REFRESH' | 'REBALANCE' | 'LIQUIDITY' | 'SAVINGS' | 'SPENDING'
+  title: string
+  description: string
+  impact: string
+  actionLabel: string
+}
+
+export function generateBankStatementNextActions(
+  statements: BankStatement[]
+): BankStatementNextAction[] {
+  const completed = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
+  if (completed.length === 0) return []
+
+  const totalIncome = completed.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
+  const totalExpenses = completed.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+  const netSavings = totalIncome - totalExpenses
+  const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
+
+  const allTransactions = completed.flatMap(s => s.extractedData?.transactions || [])
+  const categorySummary = completed.flatMap(s => s.extractedData?.categorySummary || [])
+
+  const categoryTotals: Record<string, number> = {}
+  for (const cat of categorySummary) {
+    categoryTotals[cat.category] = (categoryTotals[cat.category] || 0) + cat.amount
+  }
+
+  const topExpenseCategory = Object.entries(categoryTotals)
+    .filter(([cat]) => cat !== 'Salary' && cat !== 'Transfers')
+    .sort((a, b) => b[1] - a[1])[0]
+
+  const monthlyExpenses = totalExpenses / Math.max(completed.length, 1)
+  const emergencyFundMonths = netSavings > 0 ? netSavings / monthlyExpenses : 0
+
+  const actions: BankStatementNextAction[] = []
+
+  // Risk Refresh: if income is volatile (check variance across statements)
+  const incomePerStatement = completed.map(s => s.extractedData?.totalIncome || 0)
+  const avgIncome = incomePerStatement.reduce((a, b) => a + b, 0) / incomePerStatement.length
+  const incomeVariance = incomePerStatement.length > 1
+    ? incomePerStatement.reduce((sum, v) => sum + Math.pow(v - avgIncome, 2), 0) / incomePerStatement.length
+    : 0
+  const incomeVolatility = avgIncome > 0 ? Math.sqrt(incomeVariance) / avgIncome : 0
+
+  if (incomeVolatility > 0.15 || statements.length < 2) {
+    actions.push({
+      id: 'nba-risk-refresh',
+      priority: 'HIGH',
+      type: 'RISK_REFRESH',
+      title: 'Complete Risk Profile Assessment',
+      description: incomeVolatility > 0.15
+        ? `Your income shows ${(incomeVolatility * 100).toFixed(0)}% volatility across statements. Your risk tolerance should be reassessed.`
+        : 'Upload more statements to establish your financial baseline and determine your risk profile.',
+      impact: 'Ensure your investment strategy matches your actual financial situation',
+      actionLabel: 'Start Risk Assessment',
+    })
+  }
+
+  // Rebalancing: if spending on non-essentials is high
+  if (topExpenseCategory && totalExpenses > 0) {
+    const topPct = (topExpenseCategory[1] / totalExpenses) * 100
+    if (topPct > 30) {
+      actions.push({
+        id: 'nba-rebalance',
+        priority: 'MEDIUM',
+        type: 'REBALANCE',
+        title: 'Rebalance Your Spending',
+        description: `${topExpenseCategory[0]} accounts for ${topPct.toFixed(0)}% of your total expenses. Optimizing this category could significantly increase your savings.`,
+        impact: `Potential monthly savings of up to ${(topExpenseCategory[1] * 0.2 / Math.max(completed.length, 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${completed[0].extractedData?.currency || 'USD'}`,
+        actionLabel: 'Review Spending',
+      })
+    }
+  }
+
+  // Liquidity: emergency fund check
+  if (emergencyFundMonths < 3) {
+    actions.push({
+      id: 'nba-liquidity',
+      priority: emergencyFundMonths < 1 ? 'HIGH' : 'MEDIUM',
+      type: 'LIQUIDITY',
+      title: 'Build Emergency Liquidity Fund',
+      description: emergencyFundMonths < 1
+        ? 'Your current savings are insufficient for emergencies. Financial experts recommend 3–6 months of expenses as a safety net.'
+        : `You have approximately ${emergencyFundMonths.toFixed(1)} months of expenses saved. Aim for 3–6 months for financial security.`,
+      impact: `Target: ${(monthlyExpenses * 3).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${completed[0].extractedData?.currency || 'USD'} (3 months of expenses)`,
+      actionLabel: 'Set Savings Goal',
+    })
+  }
+
+  // Low savings rate
+  if (savingsRate < 20 && totalIncome > 0) {
+    actions.push({
+      id: 'nba-savings',
+      priority: savingsRate < 5 ? 'HIGH' : 'LOW',
+      type: 'SAVINGS',
+      title: 'Increase Your Savings Rate',
+      description: `Your current savings rate is ${savingsRate.toFixed(1)}%. Financial best practice recommends saving at least 20% of your income.`,
+      impact: `Increasing to 20% would add ${((totalIncome * 0.2 - netSavings) / Math.max(completed.length, 1)).toLocaleString(undefined, { maximumFractionDigits: 0 })} ${completed[0].extractedData?.currency || 'USD'}/month to savings`,
+      actionLabel: 'Create Savings Plan',
+    })
+  }
+
+  // High number of debit transactions
+  const debitCount = allTransactions.filter(t => t.type === 'DEBIT').length
+  const creditCount = allTransactions.filter(t => t.type === 'CREDIT').length
+  if (debitCount > creditCount * 5) {
+    actions.push({
+      id: 'nba-spending',
+      priority: 'LOW',
+      type: 'SPENDING',
+      title: 'Review Frequent Small Purchases',
+      description: `You have ${debitCount} debit transactions vs ${creditCount} income transactions. Frequent small purchases can add up significantly.`,
+      impact: 'Consolidating or reducing discretionary spending could improve your financial health',
+      actionLabel: 'Analyze Transactions',
+    })
+  }
+
+  return actions.sort((a, b) => {
+    const order = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+    return order[a.priority] - order[b.priority]
+  })
+}
+
+export async function generateBankStatementInsight(
+  question: string,
+  userName: string,
+  statements: BankStatement[]
+): Promise<AiResponse> {
+  const completed = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
+
+  if (completed.length === 0) {
+    return {
+      content: 'Please upload and process your bank statements first. Once your statements are processed, I can answer detailed questions about your finances.',
+      sources: [],
+      model: 'no-data',
+      offlineMode: true,
+    }
+  }
+
+  const totalIncome = completed.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
+  const totalExpenses = completed.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+  const netSavings = totalIncome - totalExpenses
+  const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
+  const currency = completed[0].extractedData?.currency || 'USD'
+
+  const categorySummary = completed.flatMap(s => s.extractedData?.categorySummary || [])
+  const categoryTotals: Record<string, number> = {}
+  for (const cat of categorySummary) {
+    categoryTotals[cat.category] = (categoryTotals[cat.category] || 0) + cat.amount
+  }
+
+  const allTransactions = completed.flatMap(s => s.extractedData?.transactions || [])
+
+  const statementFacts = {
+    userName,
+    currency,
+    statementCount: completed.length,
+    period: {
+      from: completed.map(s => s.extractedData?.statementDate || s.uploadedAt).sort()[0],
+      to: completed.map(s => s.extractedData?.statementDate || s.uploadedAt).sort().reverse()[0],
+    },
+    financials: {
+      totalIncome: Math.round(totalIncome),
+      totalExpenses: Math.round(totalExpenses),
+      netSavings: Math.round(netSavings),
+      savingsRate: Math.round(savingsRate * 10) / 10,
+      monthlyAvgIncome: Math.round(totalIncome / completed.length),
+      monthlyAvgExpenses: Math.round(totalExpenses / completed.length),
+    },
+    topSpendingCategories: Object.entries(categoryTotals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([cat, amount]) => ({
+        category: cat,
+        amount: Math.round(amount),
+        percentage: Math.round((amount / totalExpenses) * 1000) / 10,
+      })),
+    recentTransactions: allTransactions
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 10)
+      .map(t => ({
+        date: t.date,
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        category: t.category,
+      })),
+  }
+
+  const systemPrompt = `You are a personal financial AI assistant for ${userName}.
+You have access to their real bank statement data. Provide helpful, specific, and actionable financial insights.
+Be warm, encouraging, and use plain language. Reference specific numbers from their data.
+Always note that your analysis is based on the uploaded statements, not financial advice.`
+
+  try {
+    const factsJson = JSON.stringify(statementFacts, null, 2)
+    const promptText = `${systemPrompt}
+
+BANK STATEMENT DATA:
+${factsJson}
+
+USER QUESTION: ${question}
+
+Provide a helpful, specific answer based on the data above. Be concise (3-5 sentences max unless detail is needed).
+If the question cannot be answered from the data, say so clearly.`
+
+    const response = await window.spark.llm(promptText, 'gpt-4o-mini')
+    return {
+      content: response,
+      sources: [
+        `${completed.length} bank statement(s) analyzed`,
+        `${allTransactions.length} transactions reviewed`,
+        `Period: ${statementFacts.period.from} to ${statementFacts.period.to}`,
+      ],
+      model: 'gpt-4o-mini',
+      offlineMode: false,
+    }
+  } catch {
+    // Offline fallback
+    const lines: string[] = [
+      `Based on your ${completed.length} uploaded statement(s):`,
+      `• Total income: ${totalIncome.toLocaleString()} ${currency}`,
+      `• Total expenses: ${totalExpenses.toLocaleString()} ${currency}`,
+      `• Net savings: ${netSavings.toLocaleString()} ${currency} (${savingsRate.toFixed(1)}% savings rate)`,
+    ]
+    if (Object.keys(categoryTotals).length > 0) {
+      const top = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
+      lines.push(`• Largest spending category: ${top[0]} (${top[1].toLocaleString()} ${currency})`)
+    }
+    lines.push('\nNote: This is a summary based on your uploaded data, not financial advice.')
+    return {
+      content: lines.join('\n'),
+      sources: [`${completed.length} statement(s)`, `${allTransactions.length} transactions`],
+      model: 'offline',
+      offlineMode: true,
+    }
   }
 }

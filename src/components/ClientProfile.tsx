@@ -36,6 +36,7 @@ import { GoalDetailView } from './GoalDetailView'
 import { GoalComparisonView } from './GoalComparisonView'
 import { FamilyBudgetDialog } from './FamilyBudgetDialog'
 import { BankStatementUpload } from './BankStatementUpload'
+import { BankStatementCopilot } from './BankStatementCopilot'
 import { SpendingAlertsPanel } from './SpendingAlertsPanel'
 import { MultiStatementComparison } from './MultiStatementComparison'
 import { BankStatementGoalIntegration } from './BankStatementGoalIntegration'
@@ -527,48 +528,65 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
-  const [blankUserTab, setBlankUserTab] = useState<'upload' | 'portfolio' | 'goals'>('upload')
+  const [blankUserTab, setBlankUserTab] = useState<'upload' | 'copilot' | 'analytics' | 'goals'>('upload')
 
   if (isBlankUser) {
     return (
       <div className="space-y-6">
-        <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-transparent">
+        {/* Welcome Banner */}
+        <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-primary/5">
           <CardHeader>
-            <CardTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <UploadSimple size={24} className="text-accent" weight="duotone" />
+            <CardTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-accent to-primary">
+                <UploadSimple size={22} className="text-white" weight="duotone" />
               </div>
-              Welcome to Your Wealth Dashboard
+              Welcome, {client?.name || 'Test User'}!
             </CardTitle>
-            <CardDescription>
-              Start by uploading your bank statements to get personalized insights and recommendations
+            <CardDescription className="text-sm">
+              Upload your bank statements to unlock AI-powered insights, personalized next best actions, and portfolio analytics — all grounded in your real data.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg bg-muted/50 p-6 space-y-3">
-              <h4 className="font-semibold text-foreground">Getting Started</h4>
-              <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-                <li>Upload your bank statements (PDF, CSV, or image formats)</li>
-                <li>Our AI will automatically extract transactions and spending patterns</li>
-                <li>Review your financial insights and set up personalized goals</li>
-                <li>Track progress and get smart recommendations</li>
-              </ol>
-            </div>
-          </CardContent>
+          {clientStatements.length > 0 && (
+            <CardContent>
+              <div className="flex flex-wrap gap-3">
+                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+                  <ChartLine size={14} />
+                  {clientStatements.filter(s => s.status === 'COMPLETED').length} statement(s) processed
+                </Badge>
+                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
+                  <Target size={14} />
+                  {clientGoals.length} goal(s) active
+                </Badge>
+                {clientStatements.some(s => s.status === 'COMPLETED') && (
+                  <Button size="sm" variant="outline" className="gap-2 ml-auto" onClick={() => setBlankUserTab('copilot')}>
+                    <Lightbulb size={14} />
+                    View AI Insights
+                    <ArrowRight size={13} />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         <Tabs value={blankUserTab} onValueChange={(v) => setBlankUserTab(v as typeof blankUserTab)} className="space-y-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
-            <TabsTrigger value="upload" className="gap-2">
-              <UploadSimple size={16} />
-              Upload Statements
+          <TabsList className="grid grid-cols-4 w-full">
+            <TabsTrigger value="upload" className="gap-2 text-xs sm:text-sm">
+              <UploadSimple size={15} />
+              Upload
             </TabsTrigger>
-            <TabsTrigger value="portfolio" className="gap-2">
-              <ChartLine size={16} />
-              Portfolio
+            <TabsTrigger value="copilot" className="gap-2 text-xs sm:text-sm">
+              <Lightbulb size={15} />
+              <span className="hidden sm:inline">AI Copilot</span>
+              <span className="sm:hidden">Copilot</span>
             </TabsTrigger>
-            <TabsTrigger value="goals" className="gap-2">
-              <Target size={16} />
+            <TabsTrigger value="analytics" className="gap-2 text-xs sm:text-sm">
+              <ChartLine size={15} />
+              <span className="hidden sm:inline">Analytics</span>
+              <span className="sm:hidden">Charts</span>
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="gap-2 text-xs sm:text-sm">
+              <Target size={15} />
               Goals
             </TabsTrigger>
           </TabsList>
@@ -580,61 +598,25 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               onDelete={handleDeleteStatement}
             />
             
-            {clientStatements.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Uploaded Statements</CardTitle>
-                  <CardDescription>
-                    {clientStatements.length} statement{clientStatements.length !== 1 ? 's' : ''} uploaded
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {clientStatements.map(statement => (
-                    <div
-                      key={statement.id}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{statement.fileName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {statement.extractedData?.transactions?.length || 0} transactions • 
-                          Uploaded {new Date(statement.uploadedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge variant="secondary">
-                        {statement.extractedData?.statementDate 
-                          ? new Date(statement.extractedData.statementDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-                          : 'Processed'
-                        }
-                      </Badge>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-            )}
-
-            {clientStatements.length > 0 && (
-              <Card className="border-accent/30 bg-accent/5">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
+            {clientStatements.length > 0 && clientStatements.some(s => s.status === 'COMPLETED') && (
+              <Card className="border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5">
+                <CardContent className="pt-5 pb-5">
+                  <div className="flex items-center gap-3 mb-3">
                     <Lightbulb size={20} className="text-accent" weight="duotone" />
-                    Next Steps
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Now that you've uploaded your statements, you can:
-                  </p>
-                  <div className="space-y-2">
-                    <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setShowTemplateDialog(true)}>
-                      <Target size={16} />
-                      Create Your First Financial Goal
-                      <ArrowRight size={14} className="ml-auto" />
+                    <p className="font-semibold">Your statements are ready — explore your insights!</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" className="gap-2" onClick={() => setBlankUserTab('copilot')}>
+                      <Lightbulb size={14} />
+                      AI Copilot & Next Best Actions
                     </Button>
-                    <Button variant="outline" className="w-full justify-start gap-2" disabled>
-                      <ChartLine size={16} />
-                      View Spending Analytics
-                      <span className="ml-auto text-xs text-muted-foreground">Coming soon</span>
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setBlankUserTab('analytics')}>
+                      <ChartLine size={14} />
+                      Spending Analytics
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowTemplateDialog(true)}>
+                      <Target size={14} />
+                      Set a Goal
                     </Button>
                   </div>
                 </CardContent>
@@ -642,28 +624,21 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             )}
           </TabsContent>
 
-          <TabsContent value="portfolio" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ChartLine size={24} />
-                  Portfolio Overview
-                </CardTitle>
-                <CardDescription>
-                  Track your investment portfolio and asset allocation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-center py-12">
-                <div className="text-6xl mb-4">📊</div>
-                <h3 className="text-xl font-semibold mb-2">Portfolio Coming Soon</h3>
-                <p className="text-sm text-muted-foreground mb-6">
-                  Once you have uploaded bank statements and created goals, you can track your portfolio and investments here.
-                </p>
-                <Button variant="outline" onClick={() => setBlankUserTab('upload')}>
-                  Back to Upload
-                </Button>
-              </CardContent>
-            </Card>
+          <TabsContent value="copilot">
+            <BankStatementCopilot
+              clientId={clientId}
+              statements={clientStatements}
+              onSetGoal={() => setShowTemplateDialog(true)}
+            />
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <BankStatementCopilot
+              clientId={clientId}
+              statements={clientStatements}
+              onSetGoal={() => setShowTemplateDialog(true)}
+              defaultView="analytics"
+            />
           </TabsContent>
 
           <TabsContent value="goals" className="space-y-6">

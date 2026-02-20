@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "appName": {
+      "value": "wealth-management-dashboard"
+    },
+    "location": {
+      "value": "westeurope"
+    },
+    "sku": {
+      "value": "Free"
+    },
+    "repositoryUrl": {
+      "value": "https://github.com/v-khdumi/wealth-management-de"
+    },
+    "branch": {
+      "value": "main"
+    },
+    "repositoryToken": {
+      "value": "<YOUR_GITHUB_PAT>"
+    }
+  }
+}
