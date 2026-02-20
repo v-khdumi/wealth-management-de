@@ -40,7 +40,7 @@ param repositoryToken string = ''
 // ─── Derived resource names ───────────────────────────────────────────────────
 var openAIAccountName = '${appName}-openai'
 var cosmosAccountName = '${appName}-cosmos'
-var storageAccountName = take(replace(toLower(appName), '-', '') + 'storage', 24)
+var storageAccountName = take('${replace(toLower(appName), '-', '')}storage', 24)
 var keyVaultName = take('${appName}-kv', 24)
 
 // ─── Static Web App ───────────────────────────────────────────────────────────

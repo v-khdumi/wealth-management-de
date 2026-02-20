@@ -2,7 +2,7 @@
 
 A sophisticated wealth management platform with AI-powered Copilot, bank statement analytics, and personalized financial insights.
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.StaticApp)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fv-khdumi%2Fwealth-management-de%2Fmain%2Fazure-deploy%2Fazuredeploy.json)
 
 ## 🚀 Quick Deploy to Azure
 
