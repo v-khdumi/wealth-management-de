@@ -57,6 +57,8 @@ interface ClientProfileProps {
 }
 
 export function ClientProfile({ clientId }: ClientProfileProps) {
+  const isBlankUser = clientId === 'cli-blank'
+
   const {
     users,
     clientProfiles,
@@ -77,7 +79,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     currencyAccounts,
   } = useDataStore()
 
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState(isBlankUser ? 'upload' : 'overview')
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
   const [selectedGoalForFamily, setSelectedGoalForFamily] = useState<Goal | null>(null)
@@ -90,8 +92,6 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     currentAmount: number
     targetAmount: number
   } | null>(null)
-
-  const isBlankUser = clientId === 'cli-blank'
 
   const client = useMemo(() => (users || []).find(u => u.id === clientId), [users, clientId])
   const profile = useMemo(() => (clientProfiles || []).find(cp => cp.userId === clientId), [clientProfiles, clientId])
@@ -528,25 +528,23 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
     )
   }
 
-  const [blankUserTab, setBlankUserTab] = useState<'upload' | 'copilot' | 'analytics' | 'goals'>('upload')
 
-  if (isBlankUser) {
-    return (
-      <div className="space-y-6">
-        {/* Welcome Banner */}
+  return (
+    <div className="space-y-6">
+      {isBlankUser && (
         <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-primary/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-3 text-xl">
               <div className="p-2 rounded-xl bg-gradient-to-br from-accent to-primary">
                 <UploadSimple size={22} className="text-white" weight="duotone" />
               </div>
-              Welcome, {client?.name || 'Test User'}!
+              Welcome, {client?.name || 'Test User'}! Start with your bank statements
             </CardTitle>
-            <CardDescription className="text-sm">
-              Upload your bank statements to unlock AI-powered insights, personalized next best actions, and portfolio analytics — all grounded in your real data.
+            <CardDescription>
+              Upload bank statements from the banks you work with. Our AI will automatically extract and populate your financial details — transactions, income, expenses, and spending patterns — directly into your dashboard.
             </CardDescription>
           </CardHeader>
-          {clientStatements.length > 0 && (
+          {clientStatements.length > 0 && clientStatements.some(s => s.status === 'COMPLETED') && (
             <CardContent>
               <div className="flex flex-wrap gap-3">
                 <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
@@ -557,204 +555,17 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                   <Target size={14} />
                   {clientGoals.length} goal(s) active
                 </Badge>
-                {clientStatements.some(s => s.status === 'COMPLETED') && (
-                  <Button size="sm" variant="outline" className="gap-2 ml-auto" onClick={() => setBlankUserTab('copilot')}>
-                    <Lightbulb size={14} />
-                    View AI Insights
-                    <ArrowRight size={13} />
-                  </Button>
-                )}
+                <Button size="sm" variant="outline" className="gap-2 ml-auto" onClick={() => setActiveTab('insights')}>
+                  <Lightbulb size={14} />
+                  View AI Insights
+                  <ArrowRight size={13} />
+                </Button>
               </div>
             </CardContent>
           )}
         </Card>
+      )}
 
-        <Tabs value={blankUserTab} onValueChange={(v) => setBlankUserTab(v as typeof blankUserTab)} className="space-y-6">
-          <TabsList className="grid grid-cols-4 w-full">
-            <TabsTrigger value="upload" className="gap-2 text-xs sm:text-sm">
-              <UploadSimple size={15} />
-              Upload
-            </TabsTrigger>
-            <TabsTrigger value="copilot" className="gap-2 text-xs sm:text-sm">
-              <Lightbulb size={15} />
-              <span className="hidden sm:inline">AI Copilot</span>
-              <span className="sm:hidden">Copilot</span>
-            </TabsTrigger>
-            <TabsTrigger value="analytics" className="gap-2 text-xs sm:text-sm">
-              <ChartLine size={15} />
-              <span className="hidden sm:inline">Analytics</span>
-              <span className="sm:hidden">Charts</span>
-            </TabsTrigger>
-            <TabsTrigger value="goals" className="gap-2 text-xs sm:text-sm">
-              <Target size={15} />
-              Goals
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="upload" className="space-y-6">
-            <BankStatementUpload 
-              statements={clientStatements} 
-              onUpload={handleBankStatementUpload}
-              onDelete={handleDeleteStatement}
-            />
-            
-            {clientStatements.length > 0 && clientStatements.some(s => s.status === 'COMPLETED') && (
-              <Card className="border-accent/30 bg-gradient-to-br from-accent/5 to-primary/5">
-                <CardContent className="pt-5 pb-5">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Lightbulb size={20} className="text-accent" weight="duotone" />
-                    <p className="font-semibold">Your statements are ready — explore your insights!</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" className="gap-2" onClick={() => setBlankUserTab('copilot')}>
-                      <Lightbulb size={14} />
-                      AI Copilot & Next Best Actions
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setBlankUserTab('analytics')}>
-                      <ChartLine size={14} />
-                      Spending Analytics
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-2" onClick={() => setShowTemplateDialog(true)}>
-                      <Target size={14} />
-                      Set a Goal
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="copilot">
-            <BankStatementCopilot
-              clientId={clientId}
-              statements={clientStatements}
-              onSetGoal={() => setShowTemplateDialog(true)}
-            />
-          </TabsContent>
-
-          <TabsContent value="analytics">
-            <BankStatementCopilot
-              clientId={clientId}
-              statements={clientStatements}
-              onSetGoal={() => setShowTemplateDialog(true)}
-              defaultView="analytics"
-            />
-          </TabsContent>
-
-          <TabsContent value="goals" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Target size={24} />
-                      Financial Goals
-                    </CardTitle>
-                    <CardDescription>
-                      Set and track your financial goals
-                    </CardDescription>
-                  </div>
-                  <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
-                    <Target size={16} weight="bold" />
-                    Add Goal
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {clientGoals.length === 0 ? (
-                  <div className="text-center py-12">
-                    <Target size={48} className="mx-auto mb-4 text-muted-foreground/30" weight="duotone" />
-                    <p className="text-muted-foreground font-medium mb-2">No goals set yet</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Start planning for retirement, a home, education, or other dreams
-                    </p>
-                    <Button onClick={() => setShowTemplateDialog(true)} className="gap-2">
-                      <Target size={16} weight="bold" />
-                      Create Your First Goal
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {clientGoals.map(goal => {
-                      const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100)
-                      const gap = calculateGoalGap(goal)
-                      
-                      return (
-                        <div key={goal.id} className="p-6 border-2 rounded-xl space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="font-bold text-xl">{goal.name}</p>
-                              <Badge variant="secondary">{goal.type === 'LIFE_EVENT' ? 'Life Event' : goal.type}</Badge>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedGoalForAdjustment(goal)}
-                              className="gap-2"
-                            >
-                              <PencilSimple size={16} />
-                              Adjust
-                            </Button>
-                          </div>
-                          
-                          <div>
-                            <div className="flex justify-between text-sm mb-2">
-                              <span className="font-medium">Progress</span>
-                              <span className="font-bold text-primary">{progress.toFixed(1)}%</span>
-                            </div>
-                            <Progress value={progress} className="h-3" />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
-                            <div>
-                              <p className="text-muted-foreground mb-1">Current Savings</p>
-                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, userCurrency.symbol)}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground mb-1">Still Needed</p>
-                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, userCurrency.symbol)}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground mb-1">Target Date</p>
-                              <p className="font-semibold">{new Date(goal.targetDate).toLocaleDateString()}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground mb-1">Monthly Saving</p>
-                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, userCurrency.symbol)}</p>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-
-        <GoalTemplateDialog
-          open={showTemplateDialog}
-          onOpenChange={(open) => setShowTemplateDialog(open)}
-          onSelectTemplate={handleCreateGoalFromTemplate}
-          userAge={age}
-          userRiskScore={riskProfile?.score || 5}
-        />
-        
-        {selectedGoalForAdjustment && (
-          <GoalAdjustmentDialog
-            goal={selectedGoalForAdjustment}
-            open={!!selectedGoalForAdjustment}
-            onOpenChange={(open) => !open && setSelectedGoalForAdjustment(null)}
-            onSave={handleUpdateGoalContribution}
-          />
-        )}
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
       <div className="grid md:grid-cols-3 gap-6">
         <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
           <CardHeader className="pb-3">
@@ -1172,6 +983,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                 onUpload={handleBankStatementUpload}
                 onDelete={handleDeleteStatement}
               />
+
+              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+                <BankStatementCopilot
+                  clientId={clientId}
+                  statements={clientStatements}
+                  onSetGoal={() => setShowTemplateDialog(true)}
+                />
+              )}
               
               {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
                 <CurrencySpendingTrends statements={clientStatements} />
