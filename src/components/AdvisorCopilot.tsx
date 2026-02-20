@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -6,6 +6,9 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Sparkle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
+import { useDataStore } from '@/lib/data-store'
+import { useAuth } from '@/lib/auth-context'
+import { generateNextBestActions } from '@/lib/business-logic'
 
 interface Message {
   id: string
@@ -19,6 +22,59 @@ export function AdvisorCopilot() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const { currentUser } = useAuth()
+  const {
+    users,
+    clientProfiles,
+    riskProfiles,
+    portfolios,
+    holdings,
+    instruments,
+    modelPortfolios,
+    goals,
+  } = useDataStore()
+
+  const advisorClients = useMemo(() => {
+    if (!currentUser) return []
+    return (users || []).filter(u => u.role === 'CLIENT' && u.advisorId === currentUser.id)
+  }, [users, currentUser])
+
+  const buildContextFacts = () => {
+    const clientSummaries = advisorClients.map(client => {
+      const profile = (clientProfiles || []).find(cp => cp.userId === client.id)
+      const riskProfile = (riskProfiles || []).find(rp => rp.clientId === client.id)
+      const portfolio = (portfolios || []).find(p => p.clientId === client.id)
+      const clientHoldings = (holdings || []).filter(h => h.clientId === client.id)
+      const clientGoals = (goals || []).filter(g => g.clientId === client.id)
+      const actions = riskProfile && portfolio
+        ? generateNextBestActions(client.id, portfolio, clientHoldings, instruments || [], riskProfile, clientGoals, modelPortfolios || [])
+        : []
+
+      return {
+        id: client.id,
+        name: client.name,
+        segment: profile?.segment || 'N/A',
+        riskScore: riskProfile?.score ?? null,
+        riskCategory: riskProfile?.category || 'N/A',
+        riskProfileAgeDays: riskProfile
+          ? Math.floor((Date.now() - new Date(riskProfile.lastUpdated).getTime()) / (1000 * 60 * 60 * 24))
+          : null,
+        portfolioValue: portfolio?.totalValue ?? null,
+        cashPct: portfolio ? Math.round((portfolio.cash / portfolio.totalValue) * 100) : null,
+        goalsCount: clientGoals.length,
+        highPriorityActions: actions.filter(a => a.priority === 'HIGH').length,
+        totalActions: actions.length,
+      }
+    })
+
+    return {
+      advisorName: currentUser?.name || 'Advisor',
+      clientCount: advisorClients.length,
+      clients: clientSummaries,
+      totalAUM: clientSummaries.reduce((sum, c) => sum + (c.portfolioValue || 0), 0),
+    }
+  }
 
   const handleSubmit = async () => {
     if (!input.trim()) return
@@ -35,24 +91,45 @@ export function AdvisorCopilot() {
     setIsLoading(true)
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      const facts = buildContextFacts()
+      const factsJson = JSON.stringify(facts, null, 2)
+
+      const systemPrompt = `You are an AI Advisor Copilot for ${facts.advisorName}, a wealth management advisor.
+You have access to real-time data about their ${facts.clientCount} clients.
+Provide concise, professional, and actionable insights based strictly on the data provided.
+Do not make up any data not present in the facts. If data is not available, say so clearly.
+Always be professional and note that responses are based on system data, not external financial advice.`
+
+      const promptText = `${systemPrompt}
+
+ADVISOR BOOK DATA:
+${factsJson}
+
+ADVISOR QUESTION: ${userMessage.content}
+
+Provide a helpful, specific answer based on the data above. Be concise and professional.`
+
+      const responseText = await window.spark.llm(promptText, 'gpt-4o-mini')
+
+      const sources = [
+        `${facts.clientCount} clients in book`,
+        `Total AUM: $${facts.totalAUM.toLocaleString()}`,
+        `${facts.clients.filter(c => c.highPriorityActions > 0).length} clients with high-priority actions`,
+      ]
 
       const assistantMessage: Message = {
         id: `msg-${Date.now()}-assistant`,
         role: 'assistant',
-        content: `[DEMO COPILOT RESPONSE]\n\nThis is a demonstration of the Advisor Copilot feature. In production, this would provide AI-powered insights about your clients, portfolio analytics, and recommended actions based on your question: "${userMessage.content}"\n\nThe response would be grounded in actual client data from the system and cite specific facts from client profiles, risk assessments, and portfolio holdings.\n\nDISCLAIMER: Demo response for illustration purposes only.`,
-        sources: [
-          'Client database (12 active clients)',
-          'Portfolio analytics engine',
-          'Risk profile assessments',
-          'Next best actions engine',
-        ],
+        content: responseText,
+        sources,
         timestamp: new Date().toISOString(),
       }
 
       setMessages(prev => [...prev, assistantMessage])
     } catch (error) {
-      toast.error('Failed to get response')
+      toast.error('Failed to get response', {
+        description: 'Please try again',
+      })
     } finally {
       setIsLoading(false)
     }
