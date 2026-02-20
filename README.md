@@ -1,6 +1,52 @@
-# Wealth Management Demo + GenAI Copilot
+# Wealth Management Dashboard
 
-A sophisticated demonstration platform showcasing modern wealth management capabilities enhanced with responsible GenAI assistance for financial advisors and clients.
+A sophisticated wealth management platform with AI-powered Copilot, bank statement analytics, and personalized financial insights.
+
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.StaticApp)
+
+## 🚀 Quick Deploy to Azure
+
+### Option 1 — One-Click Deploy (Azure Portal)
+Click the **Deploy to Azure** button above. You'll need:
+- An Azure subscription
+- A resource group (or create one)
+- Your GitHub repository URL and a [Personal Access Token](https://github.com/settings/tokens) with `repo` scope
+
+### Option 2 — GitHub Actions (Recommended for CI/CD)
+1. Create an **Azure Static Web App** in the Azure Portal:
+   - Go to [portal.azure.com](https://portal.azure.com) → Create Resource → Static Web App
+   - Choose **Free** tier, connect to this GitHub repository, set build preset to **Vite**
+   - Copy the **Deployment Token** from the resource overview
+2. Add a GitHub secret named `AZURE_STATIC_WEB_APPS_API_TOKEN` with the token value
+3. Push to `main` — the `.github/workflows/azure-static-web-apps.yml` workflow deploys automatically
+
+### Option 3 — Azure CLI (Bicep template)
+```bash
+# Login and set subscription
+az login
+az account set --subscription "<your-subscription-id>"
+
+# Create resource group
+az group create --name wealth-management-rg --location westeurope
+
+# Deploy using Bicep template
+az deployment group create \
+  --resource-group wealth-management-rg \
+  --template-file azure-deploy/main.bicep \
+  --parameters appName=wealth-management-dashboard \
+               repositoryUrl=https://github.com/v-khdumi/wealth-management-de \
+               branch=main \
+               repositoryToken=<your-github-pat>
+```
+
+### Required Azure Services
+| Service | SKU | Purpose |
+|---------|-----|---------|
+| Azure Static Web Apps | Free / Standard | Host the React SPA |
+| (Optional) Azure CDN | Standard Microsoft | Global edge caching |
+| (Optional) Azure Monitor | Pay-as-you-go | Application insights |
+
+---
 
 ## 🎯 Overview
 
@@ -19,6 +65,13 @@ This is a **production-quality demo application** that illustrates how AI can be
 - **Portfolio Analytics**: Asset allocation, drift calculation, model recommendations
 - **Paper Trading**: Full order workflow with suitability, cash, and concentration validation
 - **Audit Trail**: Complete history of actions and AI interactions
+
+### For Test User (Bank Statement Flow)
+- **Bank Statement Upload**: Upload PDF/CSV bank statements — AI extracts transactions automatically
+- **AI Copilot Q&A**: Ask natural language questions grounded in your real uploaded statement data
+- **Next Best Actions**: Personalized recommendations (risk refresh, rebalancing, liquidity, savings)
+- **Spending Analytics**: Interactive charts — monthly income vs. expenses, category breakdown, savings rate
+- **Goals Tracking**: Set and track financial goals based on your actual income & savings capacity
 
 ### For Clients
 - **Portfolio View**: Holdings, allocation charts, performance tracking
