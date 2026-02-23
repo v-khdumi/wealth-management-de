@@ -104,13 +104,34 @@ async function readFileAsText(file: File): Promise<string | null> {
 
     // Clean up and limit size
     const cleaned = text.replace(/\s{3,}/g, '  ').trim()
-    return cleaned.length >= MIN_EXTRACTED_TEXT_LENGTH
-      ? cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
-      : null
+    if (cleaned.length < MIN_EXTRACTED_TEXT_LENGTH) return null
+    const candidate = cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
+    // Only return text that contains recognisable financial content;
+    // raw PDF binary rendered as ASCII would not pass this check.
+    return hasFinancialContent(candidate) ? candidate : null
   } catch (error) {
     console.error('readFileAsText error:', error)
     return null
   }
+}
+
+/**
+ * Returns true when the extracted text contains at least one financial
+ * keyword or a number that looks like a monetary amount.  This filters
+ * out garbage runs from compressed/binary PDF sections.
+ */
+function hasFinancialContent(text: string): boolean {
+  const lower = text.toLowerCase()
+  const financialKeywords = [
+    'balance', 'transaction', 'account', 'statement',
+    'debit', 'credit', 'payment', 'deposit', 'withdrawal',
+    'amount', 'date', 'total', 'income', 'expense',
+    // Romanian equivalents already covered by detectCurrencyFromContent
+    'sold', 'cont', 'tranzac', 'extras',
+  ]
+  if (financialKeywords.some(k => lower.includes(k))) return true
+  // Fallback: a string with a decimal number (e.g. "1,234.56" or "1234.56")
+  return /\d{1,3}[,.]?\d{3}[.,]\d{2}/.test(text) || /\d+\.\d{2}/.test(text)
 }
 
 /**
@@ -314,10 +335,23 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
-    // Strip markdown code blocks if the model wraps the JSON (e.g. ```json ... ```)
+    // Extract JSON from the response, handling several common LLM output formats:
+    //   1. Pure JSON
+    //   2. JSON wrapped in markdown code fences (```json ... ```)
+    //   3. JSON embedded in prose ("Here is the data: { ... }")
+    //   4. JSON followed by a trailing note ("{ ... }\nNote: ...")
     let jsonStr = response.trim()
     const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (mdMatch) jsonStr = mdMatch[1].trim()
+    if (mdMatch) {
+      jsonStr = mdMatch[1].trim()
+    } else {
+      // Find the first '{' and the matching last '}' to isolate the JSON object
+      const start = jsonStr.indexOf('{')
+      const end = jsonStr.lastIndexOf('}')
+      if (start !== -1 && end !== -1 && end > start) {
+        jsonStr = jsonStr.substring(start, end + 1)
+      }
+    }
     const data = JSON.parse(jsonStr)
 
     const categorySummary: CategorySummary[] = []
