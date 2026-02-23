@@ -106,7 +106,7 @@ async function readFileAsText(file: File): Promise<string | null> {
     const cleaned = text.replace(/\s{3,}/g, '  ').trim()
     if (cleaned.length < MIN_EXTRACTED_TEXT_LENGTH) return null
     const candidate = cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
-    // Only return text that contains recognisable financial content;
+    // Only return text that contains recognizable financial content;
     // raw PDF binary rendered as ASCII would not pass this check.
     return hasFinancialContent(candidate) ? candidate : null
   } catch (error) {
