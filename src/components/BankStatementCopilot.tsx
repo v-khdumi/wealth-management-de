@@ -302,7 +302,7 @@ export function BankStatementCopilot({ clientId, statements, onSetGoal, defaultV
           <CardHeader className="border-b bg-gradient-to-r from-accent/5 to-primary/5 pb-4">
             <CardTitle className="flex items-center gap-2 text-accent">
               <Sparkle size={22} weight="duotone" />
-              AI Financial Copilot
+              Your AI Financial Assistant
             </CardTitle>
             <CardDescription>
               {hasData

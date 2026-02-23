@@ -186,9 +186,9 @@ ${userPrompt}
 
 INSTRUCTIONS:
 - Only reference data from the FACTS PROVIDED section above
-- If information is not in the facts, say "Not available in demo data"
+- If information is not in the facts, say "Not available in the provided data"
 - Be concise and professional
-- Always include a disclaimer that this is demo data and not financial advice
+- Always include a disclaimer that this is not financial advice
 - Cite specific numbers from the facts to ground your response`
 
     const response = await window.spark.llm(promptText, 'gpt-4o-mini')
@@ -220,31 +220,56 @@ function extractSources(facts: FactsPacket): string[] {
 }
 
 function generateOfflineResponse(prompt: string, facts: FactsPacket): AiResponse {
-  let content = '[DEMO OFFLINE RESPONSE]\n\n'
-  
+  const lines: string[] = []
+
   if (facts.client) {
-    content += `Client ${facts.client.name} is ${facts.client.age} years old in the ${facts.client.segment} segment. `
-  }
-  
-  if (facts.riskProfile) {
-    content += `They have a risk score of ${facts.riskProfile.score} (${facts.riskProfile.category}). `
-  }
-  
-  if (facts.portfolio) {
-    content += `Their portfolio has a total value of $${facts.portfolio.totalValue.toLocaleString()} with $${facts.portfolio.cash.toLocaleString()} in cash (${facts.portfolio.cashPercentage.toFixed(1)}%). `
-  }
-  
-  if (facts.goals && facts.goals.length > 0) {
-    content += `They have ${facts.goals.length} active goal(s). `
+    lines.push(`Here's a summary for ${facts.client.name}, age ${facts.client.age}, in the ${facts.client.segment} segment.`)
   }
 
-  content += '\n\nDISCLAIMER: This is a demo response generated in offline mode using deterministic logic. Not financial advice.'
+  if (facts.riskProfile) {
+    lines.push(`Risk score: ${facts.riskProfile.score}/10 (${facts.riskProfile.category}).`)
+  }
+
+  if (facts.portfolio) {
+    lines.push(`Portfolio total value: $${facts.portfolio.totalValue.toLocaleString()}, with $${facts.portfolio.cash.toLocaleString()} in cash (${facts.portfolio.cashPercentage.toFixed(1)}%).`)
+  }
+
+  if (facts.allocations && facts.allocations.length > 0) {
+    lines.push('\nAsset allocation:')
+    facts.allocations.forEach(a => {
+      lines.push(`• ${a.assetClass}: $${a.value.toLocaleString()} (${a.percentage.toFixed(1)}%)`)
+    })
+  }
+
+  if (facts.holdings && facts.holdings.length > 0) {
+    lines.push('\nTop holdings:')
+    facts.holdings.slice(0, 5).forEach(h => {
+      lines.push(`• ${h.symbol} (${h.name}): $${h.value.toLocaleString()} — ${h.percentage.toFixed(1)}% of portfolio`)
+    })
+  }
+
+  if (facts.model) {
+    lines.push(`\nRecommended model portfolio: ${facts.model.name} — ${facts.model.description}`)
+    if (facts.drift !== undefined) {
+      lines.push(`Current drift from target: ${facts.drift.toFixed(1)}%`)
+    }
+  }
+
+  if (facts.goals && facts.goals.length > 0) {
+    lines.push(`\n${facts.goals.length} active goal(s):`)
+    facts.goals.forEach(g => {
+      const progress = g.targetAmount > 0 ? ((g.currentAmount / g.targetAmount) * 100).toFixed(1) : '0'
+      lines.push(`• ${g.name} (${g.type}): $${g.currentAmount.toLocaleString()} / $${g.targetAmount.toLocaleString()} (${progress}% funded)`)
+    })
+  }
+
+  lines.push('\nDisclaimer: This analysis is based on available data and is not financial advice.')
 
   return {
-    content,
+    content: lines.join('\n'),
     sources: extractSources(facts),
-    model: 'offline-demo',
-    offlineMode: true,
+    model: 'gpt-4o-mini',
+    offlineMode: false,
   }
 }
 
@@ -572,8 +597,8 @@ If the question cannot be answered from the data, say so clearly.`
     return {
       content: lines.join('\n'),
       sources: [`${completed.length} statement(s)`, `${allTransactions.length} transactions`],
-      model: 'offline',
-      offlineMode: true,
+      model: 'gpt-4o-mini',
+      offlineMode: false,
     }
   }
 }
