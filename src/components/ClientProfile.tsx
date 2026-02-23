@@ -28,7 +28,6 @@ import { useUserCurrency } from '@/hooks/use-user-currency'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
-import { AIAssistant } from './AIAssistant'
 import { InsightsDashboard } from './InsightsDashboard'
 import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
 import { GoalTemplateDialog } from './GoalTemplateDialog'
@@ -668,8 +667,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
+      <div>
+        <div>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="overflow-x-auto pb-1">
               <TabsList className="flex w-max min-w-full gap-1 h-auto p-1">
@@ -1210,10 +1209,6 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               <OrdersView clientId={clientId} />
             </TabsContent>
           </Tabs>
-        </div>
-
-        <div className="lg:col-span-1">
-          <AIAssistant clientId={clientId} />
         </div>
       </div>
 

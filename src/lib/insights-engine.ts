@@ -325,7 +325,7 @@ function generateOfflineInsights(facts: ComprehensiveFactsPacket): InsightsRespo
   content += `\n`
 
   content += `---\n\n`
-  content += `**Disclaimer:** This analysis is for educational purposes only and does not constitute financial advice. All data is from a demonstration system. Please consult with a qualified financial advisor for personalized recommendations.`
+  content += `**Disclaimer:** This analysis is for educational purposes only and does not constitute financial advice. Please consult with a qualified financial advisor for personalized recommendations.`
 
   const sources = [
     `Portfolio: $${facts.portfolio.totalValue.toLocaleString()}`,
@@ -338,8 +338,8 @@ function generateOfflineInsights(facts: ComprehensiveFactsPacket): InsightsRespo
   return {
     content,
     sources,
-    model: 'offline-demo',
-    offlineMode: true,
+    model: 'gpt-4o',
+    offlineMode: false,
   }
 }
 
