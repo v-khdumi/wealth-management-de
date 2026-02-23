@@ -608,15 +608,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       )}
 
       <div className="grid md:grid-cols-3 gap-2">
-        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
+        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent py-0 gap-0">
+          <CardHeader className="pb-1 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs">
               <Wallet size={12} />
               Total Wealth
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-primary wealth-number leading-tight">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-primary wealth-number leading-tight">
               {formatCurrency(portfolio?.totalValue || 0, userCurrency.symbol)}
             </p>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
@@ -627,15 +627,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardContent>
         </Card>
 
-        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
+        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent py-0 gap-0">
+          <CardHeader className="pb-1 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs">
               <Target size={12} />
               Goals Progress
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-success wealth-number leading-tight">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-success wealth-number leading-tight">
               {totalGoalsProgress.toFixed(0)}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -644,15 +644,15 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </CardContent>
         </Card>
 
-        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
+        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent py-0 gap-0">
+          <CardHeader className="pb-1 pt-3 px-4">
             <CardDescription className="flex items-center gap-1.5 text-xs">
               <ShieldCheck size={12} />
               Risk Profile
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-accent wealth-number leading-tight">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-accent wealth-number leading-tight">
               {riskProfile?.score || 0}/10
             </p>
             <div className="flex items-center gap-1.5 mt-1">
