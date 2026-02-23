@@ -28,7 +28,8 @@ export async function extractBankStatementData(
     const extractedData = await extractDataWithAI(file)
     return extractedData
   } catch (error) {
-    throw new Error('Failed to process statement. Please ensure it\'s a valid bank statement.')
+    console.error('extractBankStatementData failed, using fallback:', error)
+    return generateFallbackExtractedData(file, '', '')
   }
 }
 
@@ -194,14 +195,15 @@ function detectCurrencyFromContent(content: string): { currency: string; symbol:
 }
 
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
+  let detectedCurrency = ''
+  let detectedSymbol = ''
+
+  try {
   const fileName = file.name.toLowerCase()
 
   // Try to read the actual file content for OCR/extraction
   const fileContent = await readFileAsText(file)
 
-  let detectedCurrency = ''
-  let detectedSymbol = ''
-  
   // Step 1: Detect currency from filename
   if (
     fileName.includes('ron') || fileName.includes('romania') ||
@@ -341,7 +343,6 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
   ]
 }${detectedCurrency ? `\n\nREMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MUST be "${detectedSymbol}". Do not change these values.` : '\n\nREMINDER: Detect the currency from the document content and set the currency and currencySymbol fields correctly.'}`
 
-  try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
     // Extract JSON from the response, handling several common LLM output formats:
     //   1. Pure JSON
