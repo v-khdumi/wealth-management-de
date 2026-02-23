@@ -131,7 +131,10 @@ Respond with ONLY a JSON object: {"recommendedContribution": <number>, "reasonin
 The recommendedContribution must be a whole number.`
 
       const response = await window.spark.llm(promptText, 'gpt-4o-mini', true)
-      const result = JSON.parse(response)
+      let jsonStr = response.trim()
+      const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+      if (mdMatch) jsonStr = mdMatch[1].trim()
+      const result = JSON.parse(jsonStr)
       const optimized = Math.ceil(result.recommendedContribution || requiredMonthly * 1.05)
       setNewContribution(optimized)
       

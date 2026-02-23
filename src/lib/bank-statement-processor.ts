@@ -133,7 +133,12 @@ function detectCurrencyFromContent(content: string): { currency: string; symbol:
     c.includes('rulaj creditor') || c.includes('rulaj debitor') ||
     c.includes('data tranzactie') || c.includes('data valutei') ||
     c.includes('descriere tranzactie') || c.includes('numar cont') ||
-    c.includes(' ron ') || c.includes('\nron\n') || c.includes(' lei ') ||
+    c.includes('nr. cont') || c.includes('nr cont') ||
+    c.includes('cod iban') || c.includes('nr. card') ||
+    c.includes('plata') || c.includes('incasare') || c.includes('retragere') ||
+    c.includes('comision') || c.includes('transfer interbancar') ||
+    c.includes('pentru perioada') || c.includes('perioada:') ||
+    /\bron\b/.test(c) || /\blei\b/.test(c) ||
     /\d+[.,]\d{2}\s*ron\b/i.test(content) || /\d+[.,]\d{2}\s*lei\b/i.test(content)
   ) {
     return { currency: 'RON', symbol: 'lei' }
@@ -252,7 +257,7 @@ Set the currency and currencySymbol fields accordingly. DO NOT default to USD if
 2. Preserve the EXACT amounts as they appear in the document (do not convert or scale them).
 3. Only estimate fields that are genuinely absent from the document.
 4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.`
-    : `\nNote: The document content could not be extracted automatically (possibly an image-based PDF). Please infer realistic data from the filename "${file.name}" and the currency/language rules above. Generate plausible transactions consistent with the detected currency (${detectedCurrency || 'unknown'}).`
+    : `\nNote: The document content could not be extracted automatically (possibly an image-based or scanned PDF). Based on the filename "${file.name}" and the currency/language rules above, do your best to detect the currency and return an empty transaction list with zeroed balances. Do NOT invent transaction amounts or details.`
 
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
 
@@ -309,7 +314,11 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
-    const data = JSON.parse(response)
+    // Strip markdown code blocks if the model wraps the JSON (e.g. ```json ... ```)
+    let jsonStr = response.trim()
+    const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (mdMatch) jsonStr = mdMatch[1].trim()
+    const data = JSON.parse(jsonStr)
 
     const categorySummary: CategorySummary[] = []
     const categoryMap = new Map<string, { amount: number; count: number }>()
@@ -354,166 +363,7 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
       currencySymbol: finalSymbol,
     }
   } catch (error) {
-    console.error('AI extraction failed, using mock data:', error)
-    return generateMockStatementData(detectedCurrency || 'USD', detectedSymbol || '$')
-  }
-}
-
-function generateMockStatementData(currency: string = 'USD', currencySymbol: string = '$'): BankStatement['extractedData'] {
-  const currencyMultipliers: Record<string, number> = {
-    'RON': 4.5,
-    'EUR': 0.9,
-    'USD': 1,
-    'GBP': 0.8,
-    'JPY': 150,
-    'CHF': 0.9,
-    'CAD': 1.35,
-    'AUD': 1.5,
-    'PLN': 4,
-    'CZK': 23,
-    'HUF': 360,
-  }
-  
-  const multiplier = currencyMultipliers[currency] || 1
-  
-  const transactions: BankTransaction[] = [
-    {
-      id: 'tx-1',
-      date: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Direct Deposit - Employer',
-      amount: Math.round(5200 * multiplier * 100) / 100,
-      type: 'CREDIT',
-      category: 'Salary',
-      balance: Math.round(8450 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-2',
-      date: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Rent Payment',
-      amount: Math.round(1800 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Housing',
-      balance: Math.round(6650 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-3',
-      date: new Date(Date.now() - 22 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Kaufland',
-      amount: Math.round(145.32 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Groceries',
-      balance: Math.round(6504.68 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-4',
-      date: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Electric Company',
-      amount: Math.round(89.50 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Utilities',
-      balance: Math.round(6415.18 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-5',
-      date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Restaurant - Downtown',
-      amount: Math.round(67.80 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Dining',
-      balance: Math.round(6347.38 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-6',
-      date: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Gas Station',
-      amount: Math.round(52.00 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Transportation',
-      balance: Math.round(6295.38 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-7',
-      date: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Pharmacy',
-      amount: Math.round(25.00 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Healthcare',
-      balance: Math.round(6270.38 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-8',
-      date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Netflix Subscription',
-      amount: Math.round(15.99 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Entertainment',
-      balance: Math.round(6254.39 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-9',
-      date: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Online Shopping',
-      amount: Math.round(234.50 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Shopping',
-      balance: Math.round(6019.89 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-10',
-      date: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Insurance Premium',
-      amount: Math.round(175.00 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Bills',
-      balance: Math.round(5844.89 * multiplier * 100) / 100,
-    },
-    {
-      id: 'tx-11',
-      date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      description: 'Lidl',
-      amount: Math.round(98.75 * multiplier * 100) / 100,
-      type: 'DEBIT',
-      category: 'Groceries',
-      balance: Math.round(5746.14 * multiplier * 100) / 100,
-    },
-  ]
-
-  const totalIncome = transactions.filter(tx => tx.type === 'CREDIT').reduce((sum, tx) => sum + tx.amount, 0)
-  const totalExpenses = transactions.filter(tx => tx.type === 'DEBIT').reduce((sum, tx) => sum + tx.amount, 0)
-
-  const categoryMap = new Map<string, { amount: number; count: number }>()
-  transactions
-    .filter(tx => tx.type === 'DEBIT' && tx.category)
-    .forEach(tx => {
-      const existing = categoryMap.get(tx.category!) || { amount: 0, count: 0 }
-      categoryMap.set(tx.category!, {
-        amount: existing.amount + tx.amount,
-        count: existing.count + 1,
-      })
-    })
-
-  const categorySummary: CategorySummary[] = []
-  categoryMap.forEach((value, key) => {
-    categorySummary.push({
-      category: key,
-      amount: value.amount,
-      transactionCount: value.count,
-      percentage: (value.amount / totalExpenses) * 100,
-    })
-  })
-
-  categorySummary.sort((a, b) => b.amount - a.amount)
-
-  return {
-    accountNumber: '****4521',
-    statementDate: new Date().toISOString().split('T')[0],
-    openingBalance: 3250,
-    closingBalance: 5746.14,
-    totalIncome,
-    totalExpenses,
-    transactions,
-    categorySummary,
-    currency,
-    currencySymbol,
+    console.error('AI extraction failed:', error)
+    throw new Error('Failed to extract data from bank statement. Please ensure it\'s a valid bank statement and try again.')
   }
 }
