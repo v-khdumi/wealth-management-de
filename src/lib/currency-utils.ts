@@ -47,7 +47,10 @@ Make sure to return realistic, current exchange rates. Return ONLY the JSON obje
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o-mini', true)
-    const rates = JSON.parse(response)
+    let jsonStr = response.trim()
+    const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (mdMatch) jsonStr = mdMatch[1].trim()
+    const rates = JSON.parse(jsonStr)
     
     return {
       [baseCurrency]: 1,
