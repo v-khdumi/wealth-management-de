@@ -277,7 +277,10 @@ Set the currency and currencySymbol fields accordingly. DO NOT default to USD if
 1. Extract ALL real data directly from the document above — account numbers, dates, descriptions, amounts.
 2. Preserve the EXACT amounts as they appear in the document (do not convert or scale them).
 3. Only estimate fields that are genuinely absent from the document.
-4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.`
+4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.
+5. Detect the document language from the content and use it to guide extraction.
+6. If the document contains Romanian text (e.g., "extras de cont", "sold", "data", "plata"), treat all amounts as RON.
+7. For scanned/image PDFs where text quality is poor, infer the structure from visible keywords and return best-effort data with empty transactions array if amounts cannot be reliably read.`
     : `\nNote: The document content could not be extracted automatically (possibly an image-based or scanned PDF). Based on the filename "${file.name}" and the currency/language rules above, do your best to detect the currency and return an empty transaction list with zeroed balances. Do NOT invent transaction amounts or details.`
 
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".

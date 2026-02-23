@@ -21,6 +21,8 @@ import {
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
+import { useUserCurrency } from '@/hooks/use-user-currency'
+import { formatCurrency } from '@/lib/utils'
 import {
   generateNextBestActions,
   calculatePortfolioAllocations,
@@ -73,6 +75,8 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     () => bankStatements?.filter(s => s.userId === clientId && s.status === 'COMPLETED') || [],
     [bankStatements, clientId]
   )
+
+  const userCurrency = useUserCurrency(clientId, bankStatements || [])
 
   const bankDataSummary = useMemo(() => {
     if (!clientStatements || clientStatements.length === 0) return null
@@ -360,19 +364,19 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
               <div className="p-4 rounded-lg bg-success/10 border border-success/20">
                 <p className="text-sm text-muted-foreground mb-1">Total Income</p>
                 <p className="text-2xl font-display font-bold text-success">
-                  ${bankDataSummary.totalIncome.toLocaleString()}
+                  {formatCurrency(bankDataSummary.totalIncome, userCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-muted-foreground mb-1">Total Expenses</p>
                 <p className="text-2xl font-display font-bold text-destructive">
-                  ${bankDataSummary.totalExpenses.toLocaleString()}
+                  {formatCurrency(bankDataSummary.totalExpenses, userCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <p className="text-sm text-muted-foreground mb-1">Net Savings</p>
                 <p className="text-2xl font-display font-bold text-primary">
-                  ${bankDataSummary.netSavings.toLocaleString()}
+                  {formatCurrency(bankDataSummary.netSavings, userCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
@@ -476,13 +480,13 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                           <div className="bg-muted/30 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-1">Current Monthly</p>
                             <p className="font-bold text-base wealth-number">
-                              ${goal.monthlyContribution.toLocaleString()}
+                              {formatCurrency(goal.monthlyContribution, userCurrency.symbol)}
                             </p>
                           </div>
                           <div className="bg-muted/30 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-1">Recommended</p>
                             <p className="font-bold text-base wealth-number">
-                              ${Math.ceil(required).toLocaleString()}
+                              {formatCurrency(Math.ceil(required), userCurrency.symbol)}
                             </p>
                           </div>
                         </div>
@@ -506,7 +510,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                                   {shortfall > 500 ? 'Critical Gap' : 'Recommendation'}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Increase by ${Math.ceil(shortfall).toLocaleString()}/month to reach goal
+                                  Increase by {formatCurrency(Math.ceil(shortfall), userCurrency.symbol)}/month to reach goal
                                 </p>
                               </div>
                             </div>
@@ -520,7 +524,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                               <div className="flex-1">
                                 <p className="text-xs font-semibold text-success">Almost There!</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Just ${Math.ceil(shortfall).toLocaleString()}/month more to be perfectly on track
+                                  Just {formatCurrency(Math.ceil(shortfall), userCurrency.symbol)}/month more to be perfectly on track
                                 </p>
                               </div>
                             </div>
