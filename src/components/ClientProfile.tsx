@@ -107,6 +107,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const clientStatements = useMemo(() => (bankStatements || []).filter(s => s.userId === clientId), [bankStatements, clientId])
   const clientBudgets = useMemo(() => (regionalBudgets || []).filter(b => b.userId === clientId), [regionalBudgets, clientId])
   const clientCurrencyAccounts = useMemo(() => (currencyAccounts || []).filter(ca => portfolios?.find(p => p.id === ca.portfolioId && p.clientId === clientId)), [currencyAccounts, portfolios, clientId])
+  const completedStatementsCount = useMemo(() => clientStatements.filter(s => s.status === 'COMPLETED').length, [clientStatements])
 
   const userCurrency = useUserCurrency(clientId, bankStatements || [])
 
@@ -560,35 +561,35 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isBlankUser && (
         <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 to-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-accent to-primary">
-                <UploadSimple size={22} className="text-white" weight="duotone" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-3 text-lg">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-accent to-primary">
+                <UploadSimple size={18} className="text-white" weight="duotone" />
               </div>
               Welcome, {client?.name || 'Test User'}! Start with your bank statements
             </CardTitle>
             <CardDescription>
-              Upload bank statements from the banks you work with. Our AI will automatically extract and populate your financial details — transactions, income, expenses, and spending patterns — directly into your dashboard.
+              Upload bank statements and our AI will automatically extract and populate your financial details — transactions, income, expenses, and spending patterns — directly into your dashboard.
             </CardDescription>
           </CardHeader>
-          {clientStatements.length > 0 && clientStatements.some(s => s.status === 'COMPLETED') && (
-            <CardContent>
-              <div className="flex flex-wrap gap-3">
-                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
-                  <ChartLine size={14} />
-                  {clientStatements.filter(s => s.status === 'COMPLETED').length} statement(s) processed
+          {completedStatementsCount > 0 && (
+            <CardContent className="pt-0">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="gap-1.5 px-2 py-1 text-xs">
+                  <ChartLine size={12} />
+                  {completedStatementsCount} statement(s) processed
                 </Badge>
-                <Badge variant="secondary" className="gap-1.5 px-3 py-1.5">
-                  <Target size={14} />
+                <Badge variant="secondary" className="gap-1.5 px-2 py-1 text-xs">
+                  <Target size={12} />
                   {clientGoals.length} goal(s) active
                 </Badge>
-                <Button size="sm" variant="outline" className="gap-2 ml-auto" onClick={() => setActiveTab('insights')}>
-                  <Lightbulb size={14} />
+                <Button size="sm" variant="outline" className="gap-1.5 ml-auto h-7 text-xs" onClick={() => setActiveTab('insights')}>
+                  <Lightbulb size={12} />
                   View AI Insights
-                  <ArrowRight size={13} />
+                  <ArrowRight size={11} />
                 </Button>
               </div>
             </CardContent>
@@ -596,60 +597,60 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
       )}
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <Wallet size={16} />
+      <div className="grid md:grid-cols-3 gap-3">
+        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardDescription className="flex items-center gap-1.5 text-xs">
+              <Wallet size={13} />
               Total Wealth
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-display font-bold text-primary wealth-number">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-primary wealth-number leading-tight">
               {formatCurrency(portfolio?.totalValue || 0, userCurrency.symbol)}
             </p>
-            <div className="flex items-center gap-2 mt-2 text-sm">
-              <TrendUp size={16} className="text-success" weight="bold" />
+            <div className="flex items-center gap-1.5 mt-1 text-xs">
+              <TrendUp size={13} className="text-success" weight="bold" />
               <span className="text-success font-semibold">+12.5%</span>
               <span className="text-muted-foreground">this year</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-success/20 bg-gradient-to-br from-success/5 to-transparent">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <Target size={16} />
+        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardDescription className="flex items-center gap-1.5 text-xs">
+              <Target size={13} />
               Goals Progress
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-display font-bold text-success wealth-number">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-success wealth-number leading-tight">
               {totalGoalsProgress.toFixed(0)}%
             </p>
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-1">
               {clientGoals.length} active {clientGoals.length === 1 ? 'goal' : 'goals'}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-2 border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
-          <CardHeader className="pb-3">
-            <CardDescription className="flex items-center gap-2">
-              <ShieldCheck size={16} />
+        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
+          <CardHeader className="pb-1 pt-3 px-4">
+            <CardDescription className="flex items-center gap-1.5 text-xs">
+              <ShieldCheck size={13} />
               Risk Profile
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-display font-bold text-accent wealth-number">
+          <CardContent className="px-4 pb-3">
+            <p className="text-2xl font-display font-bold text-accent wealth-number leading-tight">
               {riskProfile?.score || 0}/10
             </p>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline" className="text-xs">{riskProfile?.category || 'N/A'}</Badge>
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge variant="outline" className="text-xs h-5 px-1.5">{riskProfile?.category || 'N/A'}</Badge>
               {riskStale && (
-                <Badge variant="destructive" className="text-xs gap-1">
-                  <Warning size={12} weight="fill" />
-                  Update Needed
+                <Badge variant="destructive" className="text-xs h-5 px-1.5 gap-1">
+                  <Warning size={10} weight="fill" />
+                  Update
                 </Badge>
               )}
             </div>
@@ -657,7 +658,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="overflow-x-auto pb-1">
@@ -697,16 +698,53 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               </TabsList>
             </div>
 
-            <TabsContent value="overview" className="space-y-6 mt-6">
+            <TabsContent value="overview" className="space-y-4 mt-4">
+              {!isBlankUser && clientStatements.length === 0 && (
+                <Card className="border border-dashed border-accent/40 bg-accent/5">
+                  <CardContent className="flex items-center justify-between py-3 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
+                        <UploadSimple size={16} weight="duotone" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Import your bank statements</p>
+                        <p className="text-xs text-muted-foreground">AI extracts transactions and populates all dashboards automatically</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={() => setActiveTab('upload')}>
+                      <UploadSimple size={14} />
+                      Upload
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+              {!isBlankUser && completedStatementsCount > 0 && (
+                <Card className="border border-success/20 bg-success/5">
+                  <CardContent className="flex items-center justify-between py-2 px-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1 rounded-md bg-success/10 text-success">
+                        <ChartLine size={14} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <span className="font-semibold text-foreground">{completedStatementsCount}</span> bank statement{completedStatementsCount !== 1 ? 's' : ''} imported
+                        {userCurrency.currency !== 'USD' && <span className="ml-1">· Currency: <span className="font-semibold">{userCurrency.currency}</span></span>}
+                      </p>
+                    </div>
+                    <Button size="sm" variant="ghost" className="gap-1.5 h-7 text-xs" onClick={() => setActiveTab('upload')}>
+                      View <ArrowRight size={11} />
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserIcon size={24} />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <UserIcon size={18} />
                     Personal Information
                   </CardTitle>
                   {!isEditingProfile && (
-                    <Button variant="outline" size="sm" className="w-fit gap-2 mt-2" onClick={handleStartEditProfile}>
-                      <PencilSimple size={15} />
+                    <Button variant="outline" size="sm" className="w-fit gap-2 mt-1" onClick={handleStartEditProfile}>
+                      <PencilSimple size={14} />
                       Edit Profile
                     </Button>
                   )}
@@ -787,87 +825,82 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ShieldCheck size={24} />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ShieldCheck size={18} />
                     Your Risk Profile
                     {riskStale && (
-                      <Badge variant="destructive" className="gap-1">
-                        <Warning size={14} weight="fill" />
+                      <Badge variant="destructive" className="gap-1 text-xs">
+                        <Warning size={12} weight="fill" />
                         Needs Update
                       </Badge>
                     )}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs">
                     This determines your recommended investment strategy
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">Risk Tolerance</span>
-                      <span className="font-bold wealth-number text-xl">{riskProfile?.score || 0}/10</span>
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-xs text-muted-foreground">Risk Tolerance</span>
+                      <span className="font-bold wealth-number text-base">{riskProfile?.score || 0}/10</span>
                     </div>
-                    <Progress value={(riskProfile?.score || 0) * 10} className="h-3" />
+                    <Progress value={(riskProfile?.score || 0) * 10} className="h-2" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Category</p>
-                    <Badge variant="outline" className="mt-1 text-sm">{riskProfile?.category || 'N/A'}</Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Last Updated</p>
-                    <p className="font-medium">
-                      {riskProfile?.lastUpdated ? new Date(riskProfile.lastUpdated).toLocaleDateString() : 'N/A'}
-                      {riskStale && (
-                        <span className="text-destructive text-xs ml-2">
-                          (Updated over 6 months ago - we recommend refreshing)
-                        </span>
-                      )}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Category</p>
+                      <Badge variant="outline" className="mt-0.5 text-xs">{riskProfile?.category || 'N/A'}</Badge>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Last Updated</p>
+                      <p className="text-sm font-medium">
+                        {riskProfile?.lastUpdated ? new Date(riskProfile.lastUpdated).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
                   </div>
                   {riskStale && (
-                    <Button variant="default" className="w-full">
+                    <Button variant="default" size="sm" className="w-full text-xs">
                       Update My Risk Profile
                     </Button>
                   )}
                 </CardContent>
               </Card>
 
-              <Card className="border-2 border-accent/30 bg-gradient-to-br from-accent/10 via-primary/5 to-transparent">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lightbulb size={24} weight="duotone" className="text-accent" />
-                    Financial Insights
-                  </CardTitle>
-                  <CardDescription>
-                    Get AI-powered personalized recommendations
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    View comprehensive analysis of your complete financial picture with smart, actionable recommendations tailored to your goals.
-                  </p>
+              <Card className="border border-accent/30 bg-gradient-to-br from-accent/10 via-primary/5 to-transparent">
+                <CardContent className="flex items-center justify-between py-3 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-1.5 rounded-lg bg-accent/10 text-accent">
+                      <Lightbulb size={16} weight="duotone" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Financial Insights</p>
+                      <p className="text-xs text-muted-foreground">AI-powered personalized recommendations</p>
+                    </div>
+                  </div>
                   <Button 
                     variant="default" 
-                    className="w-full gap-2"
+                    size="sm"
+                    className="gap-1.5 shrink-0"
                     onClick={() => setActiveTab('insights')}
                   >
-                    View Insights Dashboard
-                    <ArrowRight size={16} weight="bold" />
+                    View
+                    <ArrowRight size={13} weight="bold" />
                   </Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="insights" className="mt-6">
+            <TabsContent value="insights" className="mt-4">
               <InsightsDashboard clientId={clientId} />
             </TabsContent>
 
-            <TabsContent value="portfolio" className="mt-6">
+            <TabsContent value="portfolio" className="mt-4">
               <PortfolioView clientId={clientId} />
             </TabsContent>
 
-            <TabsContent value="multi-currency" className="mt-6 space-y-6">
+            <TabsContent value="multi-currency" className="mt-4 space-y-4">
               {portfolio && (
                 <MultiCurrencyPortfolio
                   portfolio={portfolio}
@@ -877,12 +910,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                 />
               )}
               
-              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+              {completedStatementsCount > 0 && (
                 <MultiCurrencySpendingComparison statements={clientStatements} />
               )}
             </TabsContent>
 
-            <TabsContent value="budgets" className="mt-6">
+            <TabsContent value="budgets" className="mt-4">
               <RegionalBudgets
                 userId={clientId}
                 regionalBudgets={clientBudgets}
@@ -893,7 +926,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               />
             </TabsContent>
 
-            <TabsContent value="goals" className="mt-6">
+            <TabsContent value="goals" className="mt-4">
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -1070,14 +1103,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               </Card>
             </TabsContent>
 
-            <TabsContent value="upload" className="mt-6 space-y-6">
+            <TabsContent value="upload" className="mt-4 space-y-4">
               <BankStatementUpload
                 statements={clientStatements}
                 onUpload={handleBankStatementUpload}
                 onDelete={handleDeleteStatement}
               />
 
-              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+              {completedStatementsCount > 0 && (
                 <BankStatementCopilot
                   clientId={clientId}
                   statements={clientStatements}
@@ -1085,11 +1118,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                 />
               )}
               
-              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+              {completedStatementsCount > 0 && (
                 <CurrencySpendingTrends statements={clientStatements} />
               )}
               
-              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+              {completedStatementsCount > 0 && (
                 <GoalTrackingFromStatements
                   statements={clientStatements}
                   goals={clientGoals}
@@ -1098,14 +1131,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                 />
               )}
               
-              {clientStatements.filter(s => s.status === 'COMPLETED').length > 0 && (
+              {completedStatementsCount > 0 && (
                 <MultiCurrencyReportExport
                   statements={clientStatements}
                   goals={clientGoals}
                 />
               )}
               
-              {clientStatements.filter(s => s.status === 'COMPLETED').length >= 2 && (
+              {completedStatementsCount >= 2 && (
                 <MultiStatementComparison statements={clientStatements} />
               )}
               
@@ -1126,7 +1159,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
               />
             </TabsContent>
 
-            <TabsContent value="activity" className="mt-6">
+            <TabsContent value="activity" className="mt-4">
               <OrdersView clientId={clientId} />
             </TabsContent>
           </Tabs>

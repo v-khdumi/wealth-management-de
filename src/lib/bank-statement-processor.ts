@@ -38,7 +38,7 @@ const MAX_EXTRACTED_TEXT_LENGTH = 8000
 
 async function readFileAsText(file: File): Promise<string | null> {
   try {
-    // For CSV, TXT, and other plaintext formats
+    // For CSV, TXT, and other plaintext formats: use native text decoding (handles UTF-8)
     if (
       file.type.startsWith('text/') ||
       file.name.match(/\.(csv|txt|tsv|json)$/i)
@@ -46,14 +46,49 @@ async function readFileAsText(file: File): Promise<string | null> {
       return await file.text()
     }
 
-    // For PDF and other binary formats: read bytes and extract printable text
+    // For PDF and other binary formats: attempt UTF-8 decoding first, then fall back to ASCII extraction
     const buffer = await file.arrayBuffer()
     const bytes = new Uint8Array(buffer)
-    // Extract sequences of printable ASCII / Latin-1 characters
+
+    // Try to extract UTF-8 text segments (handles Romanian and other diacritics)
     let text = ''
     let run = ''
-    for (let i = 0; i < bytes.length; i++) {
+    let i = 0
+    while (i < bytes.length) {
       const c = bytes[i]
+      // Detect start of UTF-8 multi-byte sequence (2-4 bytes)
+      if (c >= 0xC2 && c <= 0xF4 && i + 1 < bytes.length) {
+        const bytes2 = bytes[i + 1]
+        if ((bytes2 & 0xC0) === 0x80) {
+          // Valid continuation byte: decode the character
+          let codePoint = 0
+          let seqLen = 0
+          if ((c & 0xE0) === 0xC0) {
+            codePoint = c & 0x1F
+            seqLen = 2
+          } else if ((c & 0xF0) === 0xE0) {
+            codePoint = c & 0x0F
+            seqLen = 3
+          } else if ((c & 0xF8) === 0xF0) {
+            codePoint = c & 0x07
+            seqLen = 4
+          }
+          let valid = seqLen > 0
+          for (let k = 1; k < seqLen && valid; k++) {
+            if (i + k >= bytes.length || (bytes[i + k] & 0xC0) !== 0x80) {
+              valid = false
+              break
+            }
+            codePoint = (codePoint << 6) | (bytes[i + k] & 0x3F)
+          }
+          if (valid && codePoint > 0x1F) {
+            run += String.fromCodePoint(codePoint)
+            i += seqLen
+            continue
+          }
+        }
+      }
+      // Standard printable ASCII / control characters
       if (
         (c >= PRINTABLE_ASCII_START && c <= PRINTABLE_ASCII_END) ||
         c === LINE_FEED || c === CARRIAGE_RETURN || c === TAB
@@ -63,6 +98,7 @@ async function readFileAsText(file: File): Promise<string | null> {
         if (run.length >= MIN_RUN_LENGTH) text += run + ' '
         run = ''
       }
+      i++
     }
     if (run.length >= MIN_RUN_LENGTH) text += run
 
@@ -77,6 +113,55 @@ async function readFileAsText(file: File): Promise<string | null> {
   }
 }
 
+/**
+ * Detect currency from document content by scanning for language/bank-specific keywords.
+ * This supplements filename-based detection for documents where the filename doesn't hint the currency.
+ */
+function detectCurrencyFromContent(content: string): { currency: string; symbol: string } | null {
+  const c = content.toLowerCase()
+
+  // Romanian patterns: bank names, Romanian-specific financial terms, currency labels
+  if (
+    c.includes('banca transilvania') || c.includes('bancatransilvania') ||
+    c.includes('brd - groupe') || c.includes('brd groupe') || c.includes('brd bank') ||
+    c.includes('banca comerciala romana') || c.includes('bcr ') ||
+    c.includes('raiffeisen bank') || c.includes('ing bank romania') ||
+    c.includes('unicredit tiriac') || c.includes('alpha bank romania') ||
+    c.includes('cec bank') || c.includes('garanti bank') ||
+    c.includes('extras de cont') || c.includes('extras cont') ||
+    c.includes('sold initial') || c.includes('sold final') || c.includes('sold curent') ||
+    c.includes('rulaj creditor') || c.includes('rulaj debitor') ||
+    c.includes('data tranzactie') || c.includes('data valutei') ||
+    c.includes('descriere tranzactie') || c.includes('numar cont') ||
+    c.includes(' ron ') || c.includes('\nron\n') || c.includes(' lei ') ||
+    /\d+[.,]\d{2}\s*ron\b/i.test(content) || /\d+[.,]\d{2}\s*lei\b/i.test(content)
+  ) {
+    return { currency: 'RON', symbol: 'lei' }
+  }
+
+  // Euro patterns
+  if (
+    c.includes('banque de france') || c.includes('deutsche bank') ||
+    c.includes('ing bank n.v') || c.includes('societe generale') ||
+    c.includes('eur ') || c.includes(' euro ') ||
+    /\d+[.,]\d{2}\s*eur\b/i.test(content) || /€\s*\d/.test(content)
+  ) {
+    return { currency: 'EUR', symbol: '€' }
+  }
+
+  // GBP patterns
+  if (
+    c.includes('barclays') || c.includes('lloyds') || c.includes('natwest') ||
+    c.includes('hsbc uk') || c.includes('santander uk') ||
+    c.includes('sort code') || c.includes('gbp ') ||
+    /£\s*\d/.test(content) || /\d+[.,]\d{2}\s*gbp\b/i.test(content)
+  ) {
+    return { currency: 'GBP', symbol: '£' }
+  }
+
+  return null
+}
+
 async function extractDataWithAI(file: File): Promise<BankStatement['extractedData']> {
   const fileName = file.name.toLowerCase()
 
@@ -86,7 +171,7 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
   let detectedCurrency = ''
   let detectedSymbol = ''
   
-  // Romanian bank names and keywords
+  // Step 1: Detect currency from filename
   if (
     fileName.includes('ron') || fileName.includes('romania') ||
     fileName.includes('lei') || fileName.includes('leu') ||
@@ -132,27 +217,42 @@ async function extractDataWithAI(file: File): Promise<BankStatement['extractedDa
     detectedSymbol = '$'
   }
 
+  // Step 2: If filename gave no clue, try to detect currency from document content
+  if (!detectedCurrency && fileContent) {
+    const contentDetected = detectCurrencyFromContent(fileContent)
+    if (contentDetected) {
+      detectedCurrency = contentDetected.currency
+      detectedSymbol = contentDetected.symbol
+    }
+  }
+
   const currencyInstructionBlock = detectedCurrency
     ? `⚠️ CRITICAL: CURRENCY DETECTION REQUIREMENTS ⚠️
-The filename strongly suggests the currency is: ${detectedCurrency}
+The document analysis strongly indicates the currency is: ${detectedCurrency}
 
 MANDATORY CURRENCY RULES:
 1. The currency MUST be set to: ${detectedCurrency}
 2. The currency symbol MUST be set to: ${detectedSymbol}
-3. DO NOT change or override these currency values`
-    : `⚠️ IMPORTANT: AUTO-DETECT CURRENCY ⚠️
-Detect the currency from the document content.
-Look for: currency symbols (€, £, $, lei, RON, USD, EUR, GBP, etc.), language (Romanian → RON, English/US → USD, etc.),
-bank names, or transaction amounts to determine the correct currency.
-Romanian documents (e.g. "extras de cont", "BRD", "BCR", "Banca Transilvania", etc.) use RON (lei).
-Set the currency and currencySymbol fields accordingly.`
+3. DO NOT change or override these currency values under any circumstances
+4. All amounts in the JSON must reflect the original ${detectedCurrency} values from the document`
+    : `⚠️ IMPORTANT: AUTO-DETECT CURRENCY FROM CONTENT ⚠️
+Detect the currency from the document content. Carefully look for:
+- Currency symbols in amounts (€, £, $, lei, RON, USD, EUR, GBP, etc.)
+- Document language: Romanian text → RON (lei), English/US → USD, etc.
+- Bank names: "Banca Transilvania", "BRD", "BCR", "Raiffeisen" → RON; "Barclays", "NatWest" → GBP
+- Romanian financial terms: "extras de cont", "sold", "rulaj", "data tranzactiei" → RON
+Set the currency and currencySymbol fields accordingly. DO NOT default to USD if clear evidence of another currency exists.`
 
   const exampleCurrency = detectedCurrency || 'USD'
   const exampleSymbol = detectedSymbol || '$'
 
   const documentSection = fileContent
-    ? `\nDOCUMENT CONTENT (extracted from the uploaded file):\n---\n${fileContent}\n---\n\nIMPORTANT: Extract the real data from the document above. Use the actual account numbers, dates, transaction descriptions, and amounts from the document. Only fall back to reasonable estimates for fields that are genuinely missing from the document.`
-    : `\nNote: The document content could not be extracted automatically. Please infer realistic data from the filename "${file.name}" and the currency rules above.`
+    ? `\nDOCUMENT CONTENT (extracted from the uploaded file — use this data accurately):\n---\n${fileContent}\n---\n\nCRITICAL EXTRACTION RULES:
+1. Extract ALL real data directly from the document above — account numbers, dates, descriptions, amounts.
+2. Preserve the EXACT amounts as they appear in the document (do not convert or scale them).
+3. Only estimate fields that are genuinely absent from the document.
+4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.`
+    : `\nNote: The document content could not be extracted automatically (possibly an image-based PDF). Please infer realistic data from the filename "${file.name}" and the currency/language rules above. Generate plausible transactions consistent with the detected currency (${detectedCurrency || 'unknown'}).`
 
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
 
@@ -236,7 +336,8 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
 
     categorySummary.sort((a, b) => b.amount - a.amount)
 
-    // Use AI-detected currency if we didn't detect from filename
+    // Use pre-detected currency (from filename/content) first, then AI-detected, then fallback
+    // Pre-detected currency takes absolute priority to ensure correct currency display
     const finalCurrency = detectedCurrency || data.currency || 'USD'
     const finalSymbol = detectedSymbol || data.currencySymbol || '$'
 

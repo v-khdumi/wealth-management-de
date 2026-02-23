@@ -44,13 +44,13 @@ function AppContent() {
         </div>
       </header>
 
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-foreground mb-3">
+      <div className="container mx-auto px-6 py-4 max-w-7xl">
+        <div className="mb-4">
+          <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-1">
             Welcome back, {currentUser.name.split(' ')[0]}!
           </h1>
-          <p className="text-lg text-muted-foreground">
-            Here's your complete financial picture and personalized insights
+          <p className="text-sm text-muted-foreground">
+            Your complete financial picture and personalized insights
           </p>
         </div>
         <ClientProfile clientId={currentUser.id} />
