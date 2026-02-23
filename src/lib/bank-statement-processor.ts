@@ -104,13 +104,34 @@ async function readFileAsText(file: File): Promise<string | null> {
 
     // Clean up and limit size
     const cleaned = text.replace(/\s{3,}/g, '  ').trim()
-    return cleaned.length >= MIN_EXTRACTED_TEXT_LENGTH
-      ? cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
-      : null
+    if (cleaned.length < MIN_EXTRACTED_TEXT_LENGTH) return null
+    const candidate = cleaned.substring(0, MAX_EXTRACTED_TEXT_LENGTH)
+    // Only return text that contains recognizable financial content;
+    // raw PDF binary rendered as ASCII would not pass this check.
+    return hasFinancialContent(candidate) ? candidate : null
   } catch (error) {
     console.error('readFileAsText error:', error)
     return null
   }
+}
+
+/**
+ * Returns true when the extracted text contains at least one financial
+ * keyword or a number that looks like a monetary amount.  This filters
+ * out garbage runs from compressed/binary PDF sections.
+ */
+function hasFinancialContent(text: string): boolean {
+  const lower = text.toLowerCase()
+  const financialKeywords = [
+    'balance', 'transaction', 'account', 'statement',
+    'debit', 'credit', 'payment', 'deposit', 'withdrawal',
+    'amount', 'date', 'total', 'income', 'expense',
+    // Romanian equivalents already covered by detectCurrencyFromContent
+    'sold', 'cont', 'tranzac', 'extras',
+  ]
+  if (financialKeywords.some(k => lower.includes(k))) return true
+  // Fallback: a string with a decimal number (e.g. "1,234.56" or "1234.56")
+  return /\d{1,3}[,.]?\d{3}[.,]\d{2}/.test(text) || /\d+\.\d{2}/.test(text)
 }
 
 /**
@@ -256,7 +277,10 @@ Set the currency and currencySymbol fields accordingly. DO NOT default to USD if
 1. Extract ALL real data directly from the document above — account numbers, dates, descriptions, amounts.
 2. Preserve the EXACT amounts as they appear in the document (do not convert or scale them).
 3. Only estimate fields that are genuinely absent from the document.
-4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.`
+4. If the document is in Romanian, all fields (descriptions, categories) should reflect that context.
+5. Detect the document language from the content and use it to guide extraction.
+6. If the document contains Romanian text (e.g., "extras de cont", "sold", "data", "plata"), treat all amounts as RON.
+7. For scanned/image PDFs where text quality is poor, infer the structure from visible keywords and return best-effort data with empty transactions array if amounts cannot be reliably read.`
     : `\nNote: The document content could not be extracted automatically (possibly an image-based or scanned PDF). Based on the filename "${file.name}" and the currency/language rules above, do your best to detect the currency and return an empty transaction list with zeroed balances. Do NOT invent transaction amounts or details.`
 
   const promptText = `You are a financial data extraction AI analyzing a bank statement file named "${file.name}".
@@ -314,10 +338,23 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
 
   try {
     const response = await window.spark.llm(promptText, 'gpt-4o', true)
-    // Strip markdown code blocks if the model wraps the JSON (e.g. ```json ... ```)
+    // Extract JSON from the response, handling several common LLM output formats:
+    //   1. Pure JSON
+    //   2. JSON wrapped in markdown code fences (```json ... ```)
+    //   3. JSON embedded in prose ("Here is the data: { ... }")
+    //   4. JSON followed by a trailing note ("{ ... }\nNote: ...")
     let jsonStr = response.trim()
     const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (mdMatch) jsonStr = mdMatch[1].trim()
+    if (mdMatch) {
+      jsonStr = mdMatch[1].trim()
+    } else {
+      // Find the first '{' and the matching last '}' to isolate the JSON object
+      const start = jsonStr.indexOf('{')
+      const end = jsonStr.lastIndexOf('}')
+      if (start !== -1 && end !== -1 && end > start) {
+        jsonStr = jsonStr.substring(start, end + 1)
+      }
+    }
     const data = JSON.parse(jsonStr)
 
     const categorySummary: CategorySummary[] = []

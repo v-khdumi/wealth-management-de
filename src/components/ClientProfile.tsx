@@ -109,6 +109,16 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   const clientCurrencyAccounts = useMemo(() => (currencyAccounts || []).filter(ca => portfolios?.find(p => p.id === ca.portfolioId && p.clientId === clientId)), [currencyAccounts, portfolios, clientId])
   const completedStatementsCount = useMemo(() => clientStatements.filter(s => s.status === 'COMPLETED').length, [clientStatements])
 
+  const statementSummary = useMemo(() => {
+    const completed = clientStatements.filter(s => s.status === 'COMPLETED' && s.extractedData)
+    if (completed.length === 0) return null
+    const totalIncome = completed.reduce((sum, s) => sum + (s.extractedData?.totalIncome || 0), 0)
+    const totalExpenses = completed.reduce((sum, s) => sum + (s.extractedData?.totalExpenses || 0), 0)
+    const netSavings = totalIncome - totalExpenses
+    const savingsRate = totalIncome > 0 ? ((netSavings / totalIncome) * 100) : 0
+    return { totalIncome, totalExpenses, netSavings, savingsRate }
+  }, [clientStatements])
+
   const userCurrency = useUserCurrency(clientId, bankStatements || [])
 
   const age = profile?.dateOfBirth
@@ -597,20 +607,20 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
       )}
 
-      <div className="grid md:grid-cols-3 gap-3">
+      <div className="grid md:grid-cols-3 gap-2">
         <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader className="pb-1 pt-3 px-4">
+          <CardHeader className="pb-0 pt-2 px-3">
             <CardDescription className="flex items-center gap-1.5 text-xs">
-              <Wallet size={13} />
+              <Wallet size={12} />
               Total Wealth
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <p className="text-2xl font-display font-bold text-primary wealth-number leading-tight">
+          <CardContent className="px-3 pb-2">
+            <p className="text-lg font-display font-bold text-primary wealth-number leading-tight">
               {formatCurrency(portfolio?.totalValue || 0, userCurrency.symbol)}
             </p>
             <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <TrendUp size={13} className="text-success" weight="bold" />
+              <TrendUp size={12} className="text-success" weight="bold" />
               <span className="text-success font-semibold">+12.5%</span>
               <span className="text-muted-foreground">this year</span>
             </div>
@@ -618,14 +628,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
 
         <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent">
-          <CardHeader className="pb-1 pt-3 px-4">
+          <CardHeader className="pb-0 pt-2 px-3">
             <CardDescription className="flex items-center gap-1.5 text-xs">
-              <Target size={13} />
+              <Target size={12} />
               Goals Progress
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <p className="text-2xl font-display font-bold text-success wealth-number leading-tight">
+          <CardContent className="px-3 pb-2">
+            <p className="text-lg font-display font-bold text-success wealth-number leading-tight">
               {totalGoalsProgress.toFixed(0)}%
             </p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -635,14 +645,14 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
         </Card>
 
         <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
-          <CardHeader className="pb-1 pt-3 px-4">
+          <CardHeader className="pb-0 pt-2 px-3">
             <CardDescription className="flex items-center gap-1.5 text-xs">
-              <ShieldCheck size={13} />
+              <ShieldCheck size={12} />
               Risk Profile
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-4 pb-3">
-            <p className="text-2xl font-display font-bold text-accent wealth-number leading-tight">
+          <CardContent className="px-3 pb-2">
+            <p className="text-lg font-display font-bold text-accent wealth-number leading-tight">
               {riskProfile?.score || 0}/10
             </p>
             <div className="flex items-center gap-1.5 mt-1">
@@ -733,6 +743,43 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                     <Button size="sm" variant="ghost" className="gap-1.5 h-7 text-xs" onClick={() => setActiveTab('upload')}>
                       View <ArrowRight size={11} />
                     </Button>
+                  </CardContent>
+                </Card>
+              )}
+              {statementSummary && (
+                <Card className="border border-primary/15 bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardHeader className="pb-1 pt-3 px-4">
+                    <CardDescription className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <ChartLine size={12} />
+                        Financial Summary from Statements
+                      </span>
+                      {userCurrency.currency !== 'USD' && (
+                        <Badge variant="outline" className="text-xs h-4 px-1">{userCurrency.currency}</Badge>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-3">
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Income</p>
+                        <p className="text-sm font-bold text-success">{formatCurrency(statementSummary.totalIncome, userCurrency.symbol)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Expenses</p>
+                        <p className="text-sm font-bold text-destructive">{formatCurrency(statementSummary.totalExpenses, userCurrency.symbol)}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Net Saved</p>
+                        <p className={`text-sm font-bold ${statementSummary.netSavings >= 0 ? 'text-success' : 'text-destructive'}`}>
+                          {formatCurrency(statementSummary.netSavings, userCurrency.symbol)}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Savings Rate</p>
+                        <p className="text-sm font-bold text-primary">{statementSummary.savingsRate.toFixed(1)}%</p>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
