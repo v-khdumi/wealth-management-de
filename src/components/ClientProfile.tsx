@@ -1227,7 +1227,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
 
       {/* AI Chat Panel */}
       {showChat && (
-        <div className="fixed bottom-6 right-6 z-40 w-[400px] max-h-[600px] rounded-xl border-2 border-accent/30 bg-card shadow-2xl overflow-hidden flex flex-col">
+        <div role="dialog" aria-label="AI Financial Assistant" className="fixed bottom-6 right-6 z-40 w-[400px] max-h-[600px] rounded-xl border-2 border-accent/30 bg-card shadow-2xl overflow-hidden flex flex-col">
           <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-accent/10 to-primary/10 border-b">
             <p className="font-semibold text-sm flex items-center gap-2">
               <ChatCircle size={18} weight="duotone" className="text-accent" />
