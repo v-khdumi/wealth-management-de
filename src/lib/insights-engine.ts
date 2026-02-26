@@ -17,6 +17,7 @@ import {
   calculateGoalGap,
   calculateRequiredMonthlyContribution,
 } from './business-logic'
+import { callLLM } from './azure-openai'
 
 export interface InsightsResponse {
   content: string
@@ -367,7 +368,7 @@ Generate a comprehensive financial insights report for this client. Focus on wha
 
 Always end with a disclaimer that this is for educational purposes and not financial advice.`
 
-    const response = await window.spark.llm(promptText, 'gpt-4o')
+    const response = await callLLM(promptText, 'gpt-4o')
 
     const sources = [
       `Portfolio: $${facts.portfolio.totalValue.toLocaleString()}`,

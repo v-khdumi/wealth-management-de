@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
 import { generateNextBestActions } from '@/lib/business-logic'
+import { callLLM, isAzureOpenAIConnected } from '@/lib/azure-openai'
 
 interface Message {
   id: string
@@ -109,7 +110,7 @@ ADVISOR QUESTION: ${userMessage.content}
 
 Provide a helpful, specific answer based on the data above. Be concise and professional.`
 
-      const responseText = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const responseText = await callLLM(promptText, 'gpt-4o-mini')
 
       const sources = [
         `${facts.clientCount} clients in book`,
@@ -141,6 +142,11 @@ Provide a helpful, specific answer based on the data above. Be concise and profe
         <CardTitle className="flex items-center gap-2 text-accent">
           <Sparkle size={24} weight="fill" />
           Advisor Copilot
+          {isAzureOpenAIConnected() && (
+            <Badge variant="outline" className="ml-auto text-xs font-normal text-blue-600 border-blue-300 bg-blue-50">
+              ☁️ Powered by Azure OpenAI
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
           AI-powered insights about your clients and book

@@ -8,6 +8,7 @@ import { Sparkle, PaperPlaneTilt } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
 import { generateAdvisorBrief, createAiInteractionRecord } from '@/lib/ai-service'
+import { isAzureOpenAIConnected } from '@/lib/azure-openai'
 import { toast } from 'sonner'
 
 interface AIAssistantProps {
@@ -91,6 +92,11 @@ export function AIAssistant({ clientId }: AIAssistantProps) {
         <CardTitle className="flex items-center gap-2 text-accent">
           <Sparkle size={24} weight="duotone" />
           Your AI Financial Assistant
+          {isAzureOpenAIConnected() && (
+            <Badge variant="outline" className="ml-auto text-xs font-normal text-blue-600 border-blue-300 bg-blue-50">
+              ☁️ Powered by Azure OpenAI
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
           Ask me anything about your finances, investments, or goals

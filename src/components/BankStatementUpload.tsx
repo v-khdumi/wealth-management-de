@@ -40,6 +40,7 @@ import {
   detectUniqueCurrencies,
   CURRENCY_DATABASE 
 } from '@/lib/currency-utils'
+import { callLLM } from '@/lib/azure-openai'
 
 interface BankStatementUploadProps {
   statements: BankStatement[]
@@ -258,7 +259,7 @@ Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 
 Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts.`
 
-      const response = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const response = await callLLM(promptText, 'gpt-4o-mini')
       setAiInsights(response)
       toast.success('Insights generated successfully')
     } catch (error) {
