@@ -12,6 +12,7 @@ import type {
   BankStatement,
 } from './types'
 import { calculatePortfolioAllocations, getRecommendedModel, calculateDrift } from './business-logic'
+import { callLLM } from './azure-openai'
 
 export interface AiResponse {
   content: string
@@ -191,7 +192,7 @@ INSTRUCTIONS:
 - Always include a disclaimer that this is not financial advice
 - Cite specific numbers from the facts to ground your response`
 
-    const response = await window.spark.llm(promptText, 'gpt-4o-mini')
+    const response = await callLLM(promptText, 'gpt-4o-mini')
 
     const sources = extractSources(facts)
 
@@ -570,7 +571,7 @@ USER QUESTION: ${question}
 Provide a helpful, specific answer based on the data above. Be concise (3-5 sentences max unless detail is needed).
 If the question cannot be answered from the data, say so clearly.`
 
-    const response = await window.spark.llm(promptText, 'gpt-4o-mini')
+    const response = await callLLM(promptText, 'gpt-4o-mini')
     return {
       content: response,
       sources: [

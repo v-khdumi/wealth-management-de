@@ -1,4 +1,5 @@
 import type { BankStatement, BankTransaction, CategorySummary } from './types'
+import { callLLM } from './azure-openai'
 
 type CategoryAccumulator = { amount: number; count: number }
 
@@ -343,7 +344,7 @@ Return ONLY a valid JSON object with this EXACT structure (no additional text):
   ]
 }${detectedCurrency ? `\n\nREMINDER: The currency field MUST be "${detectedCurrency}" and currencySymbol MUST be "${detectedSymbol}". Do not change these values.` : '\n\nREMINDER: Detect the currency from the document content and set the currency and currencySymbol fields correctly.'}`
 
-    const response = await window.spark.llm(promptText, 'gpt-4o', true)
+    const response = await callLLM(promptText, 'gpt-4o', true)
     // Extract JSON from the response, handling several common LLM output formats:
     //   1. Pure JSON
     //   2. JSON wrapped in markdown code fences (```json ... ```)

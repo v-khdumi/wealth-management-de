@@ -26,6 +26,7 @@ import {
 import type { Goal } from '@/lib/types'
 import { calculateGoalGap, calculateRequiredMonthlyContribution } from '@/lib/business-logic'
 import { toast } from 'sonner'
+import { callLLM } from '@/lib/azure-openai'
 
 interface GoalAdjustmentDialogProps {
   goal: Goal
@@ -130,7 +131,7 @@ Consider a small buffer (5-10%) above the minimum required.
 Respond with ONLY a JSON object: {"recommendedContribution": <number>, "reasoning": "<brief explanation>"}
 The recommendedContribution must be a whole number.`
 
-      const response = await window.spark.llm(promptText, 'gpt-4o-mini', true)
+      const response = await callLLM(promptText, 'gpt-4o-mini', true)
       let jsonStr = response.trim()
       const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
       if (mdMatch) jsonStr = mdMatch[1].trim()

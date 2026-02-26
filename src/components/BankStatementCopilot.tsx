@@ -44,6 +44,7 @@ import {
 } from '@/lib/ai-service'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
+import { isAzureOpenAIConnected } from '@/lib/azure-openai'
 
 interface BankStatementCopilotProps {
   clientId: string
@@ -303,6 +304,11 @@ export function BankStatementCopilot({ clientId, statements, onSetGoal, defaultV
             <CardTitle className="flex items-center gap-2 text-accent">
               <Sparkle size={22} weight="duotone" />
               Your AI Financial Assistant
+              {isAzureOpenAIConnected() && (
+                <Badge variant="outline" className="ml-auto text-xs font-normal text-blue-600 border-blue-300 bg-blue-50">
+                  ☁️ Powered by Azure OpenAI
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription>
               {hasData

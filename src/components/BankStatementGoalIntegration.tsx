@@ -19,6 +19,7 @@ import {
   detectUniqueCurrencies,
   formatCurrencyWithCode
 } from '@/lib/currency-utils'
+import { callLLM } from '@/lib/azure-openai'
 
 interface BankStatementGoalIntegrationProps {
   userId: string
@@ -183,7 +184,7 @@ ${goalsNeedingAttention.map(g => {
 
 Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes. Use ${currencySymbol} when mentioning amounts.`
 
-      const response = await window.spark.llm(promptText, 'gpt-4o-mini')
+      const response = await callLLM(promptText, 'gpt-4o-mini')
       setAiInsights(response)
       
       toast.success('AI insights generated', {

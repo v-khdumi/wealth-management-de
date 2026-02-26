@@ -1,3 +1,5 @@
+import { callLLM } from './azure-openai'
+
 export interface CurrencyInfo {
   code: string
   symbol: string
@@ -46,7 +48,7 @@ Format:
 Make sure to return realistic, current exchange rates. Return ONLY the JSON object, no additional text.`
 
   try {
-    const response = await window.spark.llm(promptText, 'gpt-4o-mini', true)
+    const response = await callLLM(promptText, 'gpt-4o-mini', true)
     let jsonStr = response.trim()
     const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (mdMatch) jsonStr = mdMatch[1].trim()
