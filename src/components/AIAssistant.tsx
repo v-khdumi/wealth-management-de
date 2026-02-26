@@ -9,13 +9,15 @@ import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
 import { generateAdvisorBrief, createAiInteractionRecord } from '@/lib/ai-service'
 import { isAzureOpenAIConnected } from '@/lib/azure-openai'
+import { AiResponseRenderer } from './AiResponseRenderer'
 import { toast } from 'sonner'
 
 interface AIAssistantProps {
   clientId: string
+  onNavigate?: (tab: string) => void
 }
 
-export function AIAssistant({ clientId }: AIAssistantProps) {
+export function AIAssistant({ clientId, onNavigate }: AIAssistantProps) {
   const { currentUser } = useAuth()
   const { 
     users,
@@ -51,6 +53,26 @@ export function AIAssistant({ clientId }: AIAssistantProps) {
   const handleAskQuestion = async (questionText?: string) => {
     const q = questionText || question
     if (!q.trim() || !currentUser || !client || !profile || !riskProfile || !portfolio) return
+
+    // Detect intent and navigate to relevant tab
+    if (onNavigate) {
+      const lower = q.toLowerCase()
+      if (lower.includes('portfolio') || lower.includes('allocation') || lower.includes('holding')) {
+        onNavigate('portfolio')
+      } else if (lower.includes('goal') || lower.includes('target') || lower.includes('saving')) {
+        onNavigate('goals')
+      } else if (lower.includes('risk') || lower.includes('profile')) {
+        onNavigate('overview')
+      } else if (lower.includes('insight') || lower.includes('recommend') || lower.includes('advice') || lower.includes('focus')) {
+        onNavigate('insights')
+      } else if (lower.includes('upload') || lower.includes('statement') || lower.includes('bank') || lower.includes('spending') || lower.includes('expense') || lower.includes('income')) {
+        onNavigate('upload')
+      } else if (lower.includes('budget')) {
+        onNavigate('budgets')
+      } else if (lower.includes('currency') || lower.includes('exchange')) {
+        onNavigate('multi-currency')
+      }
+    }
 
     setIsLoading(true)
     try {
@@ -181,9 +203,7 @@ export function AIAssistant({ clientId }: AIAssistantProps) {
                             <Badge variant="secondary" className="text-xs">Demo</Badge>
                           )}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                          {interaction.response}
-                        </p>
+                        <AiResponseRenderer content={interaction.response} className="text-sm" />
                         <p className="text-xs text-muted-foreground mt-3 italic">
                           Note: This is educational guidance, not financial advice.
                         </p>

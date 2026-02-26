@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Switch } from './ui/switch'
 import { Label } from './ui/label'
+import { AiResponseRenderer } from './AiResponseRenderer'
 import {
   FilePdf,
   UploadSimple,
@@ -241,7 +242,7 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
     setIsGeneratingInsights(true)
     try {
       const currencyDisplay = aggregatedData.currencySymbol || aggregatedData.currency || '$'
-      const promptText = `You are a financial advisor analyzing bank statement data. The amounts are in ${aggregatedData.currency || 'USD'}. Based on the following spending data, provide 3-5 actionable insights and recommendations:
+      const promptText = `You are a financial advisor analyzing bank statement data. The amounts are in ${aggregatedData.currency || 'USD'}. Based on the following spending data, provide 3-5 actionable insights and recommendations.
 
 Total Income: ${currencyDisplay}${aggregatedData.totalIncome}
 Total Expenses: ${currencyDisplay}${aggregatedData.totalExpenses}
@@ -257,7 +258,7 @@ Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 3. Budget optimization suggestions
 4. Positive behaviors to reinforce
 
-Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts.`
+Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts. Do NOT use markdown formatting (no #, **, or \`\`\`) — just plain text with dashes for bullet points.`
 
       const response = await callLLM(promptText, 'gpt-4o-mini')
       setAiInsights(response)
@@ -846,9 +847,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                   </CardHeader>
                   <CardContent>
                     {aiInsights ? (
-                      <div className="prose prose-sm max-w-none">
-                        <p className="whitespace-pre-wrap text-sm">{aiInsights}</p>
-                      </div>
+                      <AiResponseRenderer content={aiInsights} />
                     ) : (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         Click "Generate Insights" to get personalized financial recommendations based on your spending data
