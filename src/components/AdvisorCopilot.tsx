@@ -8,6 +8,7 @@ import { Sparkle } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
+import { AiResponseRenderer } from '@/components/AiResponseRenderer'
 import { generateNextBestActions } from '@/lib/business-logic'
 import { callLLM, isAzureOpenAIConnected } from '@/lib/azure-openai'
 
@@ -178,7 +179,11 @@ Provide a helpful, specific answer based on the data above. Be concise and profe
                       : 'bg-accent/10 border border-accent/30 mr-8'
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.role === 'user' ? (
+                    <p className="text-sm">{message.content}</p>
+                  ) : (
+                    <AiResponseRenderer content={message.content} className="text-sm" />
+                  )}
                   {message.sources && message.sources.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-accent/30">
                       <p className="text-xs font-medium mb-2">Sources Used:</p>

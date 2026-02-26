@@ -357,7 +357,7 @@ Analyze the provided data comprehensively and generate personalized insights tha
 4. Highlight priority actions they should take
 5. Provide specific, actionable recommendations
 
-Use a friendly, encouraging tone. Be specific with numbers from the data. Structure your response clearly with headings.
+Use a friendly, encouraging tone. Be specific with numbers from the data. Structure your response with clear section titles and bullet points. Do NOT use markdown formatting — just plain text with dashes for bullet points.
 
 CRITICAL: Only use data from the FACTS PROVIDED below. If something is not in the facts, do not mention it.
 

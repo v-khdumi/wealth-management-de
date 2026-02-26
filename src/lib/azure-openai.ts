@@ -85,5 +85,9 @@ export async function callLLM(
   }
 
   // Fallback: GitHub Spark LLM
-  return window.spark.llm(prompt, model, jsonMode)
+  if (typeof window !== 'undefined' && window.spark?.llm) {
+    return window.spark.llm(prompt, model, jsonMode)
+  }
+
+  throw new Error('No AI provider configured. Set VITE_AZURE_OPENAI_ENDPOINT and VITE_AZURE_OPENAI_API_KEY environment variables.')
 }

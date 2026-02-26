@@ -22,13 +22,17 @@ import {
   Users,
   UploadSimple,
   CurrencyCircleDollar,
+  ChatCircle,
+  X,
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useUserCurrency } from '@/hooks/use-user-currency'
+import { useGlobalCurrency } from '@/lib/currency-context'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
 import { OrdersView } from './OrdersView'
 import { InsightsDashboard } from './InsightsDashboard'
+import { AIAssistant } from './AIAssistant'
 import { GoalAdjustmentDialog } from './GoalAdjustmentDialog'
 import { GoalTemplateDialog } from './GoalTemplateDialog'
 import { CustomGoalDialog } from './CustomGoalDialog'
@@ -82,6 +86,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   } = useDataStore()
 
   const [activeTab, setActiveTab] = useState(isBlankUser ? 'upload' : 'overview')
+  const [showChat, setShowChat] = useState(false)
   const [selectedGoalForAdjustment, setSelectedGoalForAdjustment] = useState<Goal | null>(null)
   const [selectedGoalForDetail, setSelectedGoalForDetail] = useState<Goal | null>(null)
   const [selectedGoalForFamily, setSelectedGoalForFamily] = useState<Goal | null>(null)
@@ -119,6 +124,10 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   }, [clientStatements])
 
   const userCurrency = useUserCurrency(clientId, bankStatements || [])
+  const globalCurrency = useGlobalCurrency()
+  
+  // Use global currency if set to non-default, otherwise use detected user currency
+  const activeCurrency = globalCurrency.currency !== 'USD' ? globalCurrency : userCurrency
 
   const age = profile?.dateOfBirth
     ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
@@ -607,54 +616,45 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       )}
 
       <div className="grid md:grid-cols-3 gap-2">
-        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <Wallet size={12} />
               Total Wealth
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-primary wealth-number leading-tight">
-              {formatCurrency(portfolio?.totalValue || 0, userCurrency.symbol)}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <TrendUp size={12} className="text-success" weight="bold" />
-              <span className="text-success font-semibold">+12.5%</span>
-              <span className="text-muted-foreground">this year</span>
+            <div className="text-right">
+              <p className="text-base font-display font-bold text-primary wealth-number leading-tight">
+                {formatCurrency(portfolio?.totalValue || 0, activeCurrency.symbol)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <Target size={12} />
               Goals Progress
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-success wealth-number leading-tight">
-              {totalGoalsProgress.toFixed(0)}%
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {clientGoals.length} active {clientGoals.length === 1 ? 'goal' : 'goals'}
-            </p>
+            <div className="text-right flex items-center gap-2">
+              <p className="text-base font-display font-bold text-success wealth-number leading-tight">
+                {totalGoalsProgress.toFixed(0)}%
+              </p>
+              <span className="text-xs text-muted-foreground">({clientGoals.length} {clientGoals.length === 1 ? 'goal' : 'goals'})</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <ShieldCheck size={12} />
               Risk Profile
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-accent wealth-number leading-tight">
-              {riskProfile?.score || 0}/10
-            </p>
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-display font-bold text-accent wealth-number leading-tight">
+                {riskProfile?.score || 0}/10
+              </p>
               <Badge variant="outline" className="text-xs h-5 px-1.5">{riskProfile?.category || 'N/A'}</Badge>
               {riskStale && (
                 <Badge variant="destructive" className="text-xs h-5 px-1.5 gap-1">
@@ -736,7 +736,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                       </div>
                       <p className="text-xs text-muted-foreground">
                         <span className="font-semibold text-foreground">{completedStatementsCount}</span> bank statement{completedStatementsCount !== 1 ? 's' : ''} imported
-                        {userCurrency.currency !== 'USD' && <span className="ml-1">· Currency: <span className="font-semibold">{userCurrency.currency}</span></span>}
+                        {activeCurrency.currency !== 'USD' && <span className="ml-1">· Currency: <span className="font-semibold">{activeCurrency.currency}</span></span>}
                       </p>
                     </div>
                     <Button size="sm" variant="ghost" className="gap-1.5 h-7 text-xs" onClick={() => setActiveTab('upload')}>
@@ -753,8 +753,8 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                         <ChartLine size={12} />
                         Financial Summary from Statements
                       </span>
-                      {userCurrency.currency !== 'USD' && (
-                        <Badge variant="outline" className="text-xs h-4 px-1">{userCurrency.currency}</Badge>
+                      {activeCurrency.currency !== 'USD' && (
+                        <Badge variant="outline" className="text-xs h-4 px-1">{activeCurrency.currency}</Badge>
                       )}
                     </CardDescription>
                   </CardHeader>
@@ -762,16 +762,16 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                     <div className="grid grid-cols-4 gap-2">
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Income</p>
-                        <p className="text-sm font-bold text-success">{formatCurrency(statementSummary.totalIncome, userCurrency.symbol)}</p>
+                        <p className="text-sm font-bold text-success">{formatCurrency(statementSummary.totalIncome, activeCurrency.symbol)}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Expenses</p>
-                        <p className="text-sm font-bold text-destructive">{formatCurrency(statementSummary.totalExpenses, userCurrency.symbol)}</p>
+                        <p className="text-sm font-bold text-destructive">{formatCurrency(statementSummary.totalExpenses, activeCurrency.symbol)}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Net Saved</p>
                         <p className={`text-sm font-bold ${statementSummary.netSavings >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {formatCurrency(statementSummary.netSavings, userCurrency.symbol)}
+                          {formatCurrency(statementSummary.netSavings, activeCurrency.symbol)}
                         </p>
                       </div>
                       <div className="text-center">
@@ -1094,11 +1094,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                           <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
                             <div>
                               <p className="text-muted-foreground mb-1">Current Savings</p>
-                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, userCurrency.symbol)}</p>
+                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, activeCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Still Needed</p>
-                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, userCurrency.symbol)}</p>
+                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, activeCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Target Date</p>
@@ -1106,7 +1106,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Monthly Saving</p>
-                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, userCurrency.symbol)}</p>
+                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, activeCurrency.symbol)}</p>
                             </div>
                           </div>
 
@@ -1115,7 +1115,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               <div>
                                 <p className="font-semibold text-warning mb-1">💡 Recommendation</p>
                                 <p className="text-sm">
-                                  Consider increasing your monthly contribution by <strong>{formatCurrency(Math.floor(required - goal.monthlyContribution), userCurrency.symbol)}</strong> to stay on track for your target date.
+                                  Consider increasing your monthly contribution by <strong>{formatCurrency(Math.floor(required - goal.monthlyContribution), activeCurrency.symbol)}</strong> to stay on track for your target date.
                                 </p>
                               </div>
                               <Button
@@ -1211,6 +1211,37 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
           </Tabs>
         </div>
       </div>
+
+      {/* Floating AI Chat Toggle */}
+      {!showChat && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Button
+            onClick={() => setShowChat(true)}
+            size="lg"
+            className="rounded-full h-14 w-14 shadow-lg gap-0 p-0 ai-glow"
+          >
+            <ChatCircle size={28} weight="duotone" />
+          </Button>
+        </div>
+      )}
+
+      {/* AI Chat Panel */}
+      {showChat && (
+        <div role="dialog" aria-label="AI Financial Assistant" className="fixed bottom-6 right-6 z-40 w-[400px] max-h-[600px] rounded-xl border-2 border-accent/30 bg-card shadow-2xl overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-accent/10 to-primary/10 border-b">
+            <p className="font-semibold text-sm flex items-center gap-2">
+              <ChatCircle size={18} weight="duotone" className="text-accent" />
+              AI Financial Assistant
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => setShowChat(false)} className="h-7 w-7 p-0">
+              <X size={16} />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto">
+            <AIAssistant clientId={clientId} onNavigate={(tab) => { setActiveTab(tab); setShowChat(false); }} />
+          </div>
+        </div>
+      )}
 
       {selectedGoalForAdjustment && (
         <GoalAdjustmentDialog

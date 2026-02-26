@@ -190,7 +190,8 @@ INSTRUCTIONS:
 - If information is not in the facts, say "Not available in the provided data"
 - Be concise and professional
 - Always include a disclaimer that this is not financial advice
-- Cite specific numbers from the facts to ground your response`
+- Cite specific numbers from the facts to ground your response
+- Do NOT use markdown formatting — just plain text with dashes for bullet points`
 
     const response = await callLLM(promptText, 'gpt-4o-mini')
 

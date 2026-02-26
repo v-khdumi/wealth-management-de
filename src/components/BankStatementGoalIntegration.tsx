@@ -10,6 +10,7 @@ import {
   CheckCircle,
   CurrencyCircleDollar,
 } from '@phosphor-icons/react'
+import { AiResponseRenderer } from './AiResponseRenderer'
 import { toast } from 'sonner'
 import type { BankStatement, Goal } from '@/lib/types'
 import { 
@@ -182,7 +183,7 @@ ${goalsNeedingAttention.map(g => {
   return `- ${g.name}: ${goalSymbol}${g.currentAmount.toLocaleString()} of ${goalSymbol}${g.targetAmount.toLocaleString()} (${((g.currentAmount / g.targetAmount) * 100).toFixed(0)}% complete, target: ${new Date(g.targetDate).toLocaleDateString()})`
 }).join('\n')}
 
-Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes. Use ${currencySymbol} when mentioning amounts.`
+Provide 3-5 specific, actionable recommendations on how this user can optimize their spending to better fund their goals. Be encouraging but realistic. Focus on the highest-impact changes. Use ${currencySymbol} when mentioning amounts. Do NOT use markdown formatting — just plain text with dashes for bullet points.`
 
       const response = await callLLM(promptText, 'gpt-4o-mini')
       setAiInsights(response)
@@ -191,8 +192,27 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
         description: 'Review recommendations below'
       })
     } catch (error) {
-      toast.error('Failed to generate insights', {
-        description: 'Please try again'
+      // Offline fallback: generate local summary
+      const currencySymbol = getCurrencySymbol(baseCurrency)
+      const lines: string[] = []
+      lines.push('Spending-to-Goals Analysis')
+      if (spendingInsights.length > 0) {
+        spendingInsights.slice(0, 3).forEach(i => {
+          lines.push(`- ${i.category}: ${currencySymbol}${i.monthlyAverage.toFixed(0)}/month — potential savings of ${currencySymbol}${i.potentialSavings.toFixed(0)}/month`)
+        })
+      }
+      if (goalsNeedingAttention.length > 0) {
+        lines.push('')
+        lines.push('Goals that need attention:')
+        goalsNeedingAttention.slice(0, 3).forEach(g => {
+          lines.push(`- ${g.name}: ${((g.currentAmount / g.targetAmount) * 100).toFixed(0)}% complete`)
+        })
+      }
+      lines.push('')
+      lines.push('Note: Configure Azure OpenAI for AI-powered personalized recommendations.')
+      setAiInsights(lines.join('\n'))
+      toast.info('Generated local insights', {
+        description: 'Connect Azure OpenAI for AI-powered analysis'
       })
     } finally {
       setIsGenerating(false)
@@ -357,9 +377,7 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
               </h4>
               <Card className="bg-accent/5 border-accent/30">
                 <CardContent className="pt-4">
-                  <div className="prose prose-sm max-w-none">
-                    <p className="whitespace-pre-wrap">{aiInsights}</p>
-                  </div>
+                  <AiResponseRenderer content={aiInsights} />
                 </CardContent>
               </Card>
             </div>

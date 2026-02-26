@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { Switch } from './ui/switch'
 import { Label } from './ui/label'
+import { AiResponseRenderer } from './AiResponseRenderer'
 import {
   FilePdf,
   UploadSimple,
@@ -241,7 +242,7 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
     setIsGeneratingInsights(true)
     try {
       const currencyDisplay = aggregatedData.currencySymbol || aggregatedData.currency || '$'
-      const promptText = `You are a financial advisor analyzing bank statement data. The amounts are in ${aggregatedData.currency || 'USD'}. Based on the following spending data, provide 3-5 actionable insights and recommendations:
+      const promptText = `You are a financial advisor analyzing bank statement data. The amounts are in ${aggregatedData.currency || 'USD'}. Based on the following spending data, provide 3-5 actionable insights and recommendations.
 
 Total Income: ${currencyDisplay}${aggregatedData.totalIncome}
 Total Expenses: ${currencyDisplay}${aggregatedData.totalExpenses}
@@ -257,14 +258,42 @@ Provide specific, actionable advice in a friendly, encouraging tone. Focus on:
 3. Budget optimization suggestions
 4. Positive behaviors to reinforce
 
-Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts.`
+Keep each insight concise (2-3 sentences max). Use the currency symbol ${currencyDisplay} when mentioning amounts. Do NOT use markdown formatting (no #, **, or \`\`\`) — just plain text with dashes for bullet points.`
 
       const response = await callLLM(promptText, 'gpt-4o-mini')
       setAiInsights(response)
       toast.success('Insights generated successfully')
     } catch (error) {
-      setAiInsights('Unable to generate insights at this time. Please ensure you have uploaded and processed at least one bank statement.')
-      toast.error('Failed to generate insights')
+      // Offline fallback: generate local insights from available data
+      const currencyDisplay = aggregatedData.currencySymbol || aggregatedData.currency || '$'
+      const lines: string[] = []
+      lines.push('Financial Overview')
+      lines.push(`- Total Income: ${currencyDisplay}${aggregatedData.totalIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
+      lines.push(`- Total Expenses: ${currencyDisplay}${aggregatedData.totalExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
+      lines.push(`- Net Savings: ${currencyDisplay}${aggregatedData.netSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })} (${aggregatedData.savingsRate.toFixed(1)}% savings rate)`)
+      if (aggregatedData.categorySummary.length > 0) {
+        lines.push('')
+        lines.push('Top Spending Areas')
+        aggregatedData.categorySummary.slice(0, 3).forEach(c => {
+          lines.push(`- ${c.category}: ${currencyDisplay}${c.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} (${c.percentage.toFixed(1)}% of expenses)`)
+        })
+      }
+      if (aggregatedData.savingsRate >= 20) {
+        lines.push('')
+        lines.push('Your savings rate is strong — keep it up!')
+      } else if (aggregatedData.savingsRate >= 10) {
+        lines.push('')
+        lines.push('Consider increasing your savings rate to 20% for long-term financial health.')
+      } else {
+        lines.push('')
+        lines.push('Your savings rate is below recommended levels. Review your top spending categories for potential reductions.')
+      }
+      lines.push('')
+      lines.push('Note: This is a local summary. Configure Azure OpenAI for personalized AI-powered insights.')
+      setAiInsights(lines.join('\n'))
+      toast.info('Generated local insights', {
+        description: 'Connect Azure OpenAI for AI-powered analysis'
+      })
     } finally {
       setIsGeneratingInsights(false)
     }
@@ -846,9 +875,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                   </CardHeader>
                   <CardContent>
                     {aiInsights ? (
-                      <div className="prose prose-sm max-w-none">
-                        <p className="whitespace-pre-wrap text-sm">{aiInsights}</p>
-                      </div>
+                      <AiResponseRenderer content={aiInsights} />
                     ) : (
                       <p className="text-sm text-muted-foreground text-center py-4">
                         Click "Generate Insights" to get personalized financial recommendations based on your spending data
