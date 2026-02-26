@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { Sparkle, TrendUp, TrendDown } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
+import { AiResponseRenderer } from '@/components/AiResponseRenderer'
 import {
   calculatePortfolioAllocations,
   getRecommendedModel,
@@ -133,7 +134,7 @@ export function PortfolioView({ clientId }: PortfolioViewProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">{explanation}</p>
+            <AiResponseRenderer content={explanation} />
           </CardContent>
         </Card>
       )}

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
+import { AiResponseRenderer } from '@/components/AiResponseRenderer'
 import {
   Sparkle,
   PaperPlaneTilt,
@@ -372,7 +373,7 @@ export function BankStatementCopilot({ clientId, statements, onSetGoal, defaultV
                             <span className="text-xs font-semibold text-accent">AI Copilot</span>
                             {msg.offlineMode && <Badge variant="secondary" className="text-xs py-0">Offline</Badge>}
                           </div>
-                          <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                          <AiResponseRenderer content={msg.content} className="text-sm" />
                           {msg.sources && msg.sources.length > 0 && (
                             <div className="mt-3 pt-2 border-t border-accent/20">
                               <p className="text-xs text-muted-foreground font-medium mb-1">Sources:</p>

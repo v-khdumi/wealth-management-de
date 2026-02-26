@@ -616,54 +616,45 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
       )}
 
       <div className="grid md:grid-cols-3 gap-2">
-        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <Wallet size={12} />
               Total Wealth
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-primary wealth-number leading-tight">
-              {formatCurrency(portfolio?.totalValue || 0, activeCurrency.symbol)}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1 text-xs">
-              <TrendUp size={12} className="text-success" weight="bold" />
-              <span className="text-success font-semibold">+12.5%</span>
-              <span className="text-muted-foreground">this year</span>
+            <div className="text-right">
+              <p className="text-base font-display font-bold text-primary wealth-number leading-tight">
+                {formatCurrency(portfolio?.totalValue || 0, activeCurrency.symbol)}
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-success/20 bg-gradient-to-br from-success/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <Target size={12} />
               Goals Progress
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-success wealth-number leading-tight">
-              {totalGoalsProgress.toFixed(0)}%
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {clientGoals.length} active {clientGoals.length === 1 ? 'goal' : 'goals'}
-            </p>
+            <div className="text-right flex items-center gap-2">
+              <p className="text-base font-display font-bold text-success wealth-number leading-tight">
+                {totalGoalsProgress.toFixed(0)}%
+              </p>
+              <span className="text-xs text-muted-foreground">({clientGoals.length} {clientGoals.length === 1 ? 'goal' : 'goals'})</span>
+            </div>
           </CardContent>
         </Card>
 
-        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent">
-          <CardHeader className="pb-0 pt-2 px-3">
-            <CardDescription className="flex items-center gap-1.5 text-xs">
+        <Card className="border border-accent/20 bg-gradient-to-br from-accent/5 to-transparent py-0">
+          <CardContent className="px-3 py-2 flex items-center justify-between gap-2">
+            <CardDescription className="flex items-center gap-1.5 text-xs shrink-0">
               <ShieldCheck size={12} />
               Risk Profile
             </CardDescription>
-          </CardHeader>
-          <CardContent className="px-3 pb-2">
-            <p className="text-lg font-display font-bold text-accent wealth-number leading-tight">
-              {riskProfile?.score || 0}/10
-            </p>
-            <div className="flex items-center gap-1.5 mt-1">
+            <div className="flex items-center gap-2">
+              <p className="text-base font-display font-bold text-accent wealth-number leading-tight">
+                {riskProfile?.score || 0}/10
+              </p>
               <Badge variant="outline" className="text-xs h-5 px-1.5">{riskProfile?.category || 'N/A'}</Badge>
               {riskStale && (
                 <Badge variant="destructive" className="text-xs h-5 px-1.5 gap-1">

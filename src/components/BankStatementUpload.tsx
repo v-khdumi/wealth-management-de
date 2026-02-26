@@ -264,8 +264,36 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
       setAiInsights(response)
       toast.success('Insights generated successfully')
     } catch (error) {
-      setAiInsights('Unable to generate insights at this time. Please ensure you have uploaded and processed at least one bank statement.')
-      toast.error('Failed to generate insights')
+      // Offline fallback: generate local insights from available data
+      const currencyDisplay = aggregatedData.currencySymbol || aggregatedData.currency || '$'
+      const lines: string[] = []
+      lines.push('Financial Overview')
+      lines.push(`- Total Income: ${currencyDisplay}${aggregatedData.totalIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
+      lines.push(`- Total Expenses: ${currencyDisplay}${aggregatedData.totalExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}`)
+      lines.push(`- Net Savings: ${currencyDisplay}${aggregatedData.netSavings.toLocaleString(undefined, { maximumFractionDigits: 0 })} (${aggregatedData.savingsRate.toFixed(1)}% savings rate)`)
+      if (aggregatedData.categorySummary.length > 0) {
+        lines.push('')
+        lines.push('Top Spending Areas')
+        aggregatedData.categorySummary.slice(0, 3).forEach(c => {
+          lines.push(`- ${c.category}: ${currencyDisplay}${c.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })} (${c.percentage.toFixed(1)}% of expenses)`)
+        })
+      }
+      if (aggregatedData.savingsRate >= 20) {
+        lines.push('')
+        lines.push('Your savings rate is strong — keep it up!')
+      } else if (aggregatedData.savingsRate >= 10) {
+        lines.push('')
+        lines.push('Consider increasing your savings rate to 20% for long-term financial health.')
+      } else {
+        lines.push('')
+        lines.push('Your savings rate is below recommended levels. Review your top spending categories for potential reductions.')
+      }
+      lines.push('')
+      lines.push('Note: This is a local summary. Configure Azure OpenAI for personalized AI-powered insights.')
+      setAiInsights(lines.join('\n'))
+      toast.info('Generated local insights', {
+        description: 'Connect Azure OpenAI for AI-powered analysis'
+      })
     } finally {
       setIsGeneratingInsights(false)
     }
