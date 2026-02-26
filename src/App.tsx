@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider, useAuth } from '@/lib/auth-context'
 import { LoginPage } from '@/components/LoginPage'
 import { ClientProfile } from '@/components/ClientProfile'
+import { AIAssistant } from '@/components/AIAssistant'
 import { Button } from '@/components/ui/button'
-import { SignOut, Sparkle } from '@phosphor-icons/react'
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import { SignOut, Sparkle, ChatCircle, X } from '@phosphor-icons/react'
 
 function AppContent() {
   const { currentUser, logout } = useAuth()
+  const [chatOpen, setChatOpen] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -55,6 +59,33 @@ function AppContent() {
         </div>
         <ClientProfile clientId={currentUser.id} />
       </div>
+
+      {/* Floating AI Chatbot Button */}
+      <Button
+        onClick={() => setChatOpen(true)}
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-primary to-accent hover:from-primary/90 hover:to-accent/90"
+        size="icon"
+        aria-label="Open AI Assistant"
+      >
+        {chatOpen ? (
+          <X size={24} weight="bold" className="text-white" />
+        ) : (
+          <ChatCircle size={24} weight="fill" className="text-white" />
+        )}
+      </Button>
+
+      {/* AI Assistant Sheet */}
+      <Sheet open={chatOpen} onOpenChange={setChatOpen}>
+        <SheetContent side="right" className="sm:max-w-md p-0 overflow-hidden">
+          <SheetTitle className="sr-only">AI Financial Assistant</SheetTitle>
+          <SheetDescription className="sr-only">
+            Chat with your AI financial assistant powered by Azure OpenAI
+          </SheetDescription>
+          <div className="h-full overflow-y-auto">
+            <AIAssistant clientId={currentUser.id} />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }
