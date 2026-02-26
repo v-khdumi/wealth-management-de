@@ -62,7 +62,7 @@ function AppContent() {
 
       {/* Floating AI Chatbot Button */}
       <Button
-        onClick={() => setChatOpen(true)}
+        onClick={() => setChatOpen(prev => !prev)}
         className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-primary to-accent hover:from-primary/90 hover:to-accent/90"
         size="icon"
         aria-label="Open AI Assistant"
