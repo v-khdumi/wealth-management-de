@@ -166,7 +166,7 @@ export function CurrencySpendingTrends({ statements }: CurrencySpendingTrendsPro
       currencySymbol: selectedCurrency !== 'ALL' ? getCurrencySymbol(selectedCurrency) : getCurrencySymbol(globalCurrency.currency),
       currencyCode: selectedCurrency !== 'ALL' ? selectedCurrency : globalCurrency.currency
     }
-  }, [filteredData, selectedCurrency])
+  }, [filteredData, selectedCurrency, globalCurrency.currency])
 
   const handleExportCurrencyReport = () => {
     if (!summaryStats) {
