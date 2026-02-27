@@ -27,6 +27,7 @@ import {
   CURRENCY_DATABASE,
 } from '@/lib/currency-utils'
 import { useDataStore } from '@/lib/data-store'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface MultiCurrencyPortfolioProps {
   portfolio: Portfolio
@@ -49,7 +50,8 @@ export function MultiCurrencyPortfolio({
   instruments,
   currencyAccounts = [],
 }: MultiCurrencyPortfolioProps) {
-  const [baseCurrency, setBaseCurrency] = useState<string>(portfolio.baseCurrency || 'USD')
+  const globalCurrency = useGlobalCurrency()
+  const [baseCurrency, setBaseCurrency] = useState<string>(globalCurrency.currency)
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
   const [isLoadingRates, setIsLoadingRates] = useState(false)
   const [enableConversion, setEnableConversion] = useState(true)
@@ -68,6 +70,10 @@ export function MultiCurrencyPortfolio({
     
     return Array.from(currencies).sort()
   }, [portfolio, holdings, instruments, currencyAccounts])
+
+  useEffect(() => {
+    setBaseCurrency(globalCurrency.currency)
+  }, [globalCurrency.currency])
 
   useEffect(() => {
     const loadRates = async () => {

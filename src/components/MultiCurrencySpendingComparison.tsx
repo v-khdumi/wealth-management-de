@@ -45,6 +45,7 @@ import {
   detectUniqueCurrencies,
   CURRENCY_DATABASE,
 } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface MultiCurrencySpendingComparisonProps {
   statements: BankStatement[]
@@ -62,7 +63,8 @@ const COLORS = [
 ]
 
 export function MultiCurrencySpendingComparison({ statements }: MultiCurrencySpendingComparisonProps) {
-  const [baseCurrency, setBaseCurrency] = useState<string>('USD')
+  const globalCurrency = useGlobalCurrency()
+  const [baseCurrency, setBaseCurrency] = useState<string>(globalCurrency.currency)
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
   const [isLoadingRates, setIsLoadingRates] = useState(false)
   const [enableConversion, setEnableConversion] = useState(true)
@@ -75,6 +77,10 @@ export function MultiCurrencySpendingComparison({ statements }: MultiCurrencySpe
     () => statements.filter(s => s.status === 'COMPLETED' && s.extractedData),
     [statements]
   )
+
+  useEffect(() => {
+    setBaseCurrency(globalCurrency.currency)
+  }, [globalCurrency.currency])
 
   useEffect(() => {
     const loadRates = async () => {

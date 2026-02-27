@@ -21,7 +21,6 @@ import {
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
-import { useUserCurrency } from '@/hooks/use-user-currency'
 import { useGlobalCurrency } from '@/lib/currency-context'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -78,9 +77,8 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
     [bankStatements, clientId]
   )
 
-  const userCurrency = useUserCurrency(clientId, bankStatements || [])
   const globalCurrency = useGlobalCurrency()
-  const activeCurrency = globalCurrency.currency !== 'USD' ? globalCurrency : userCurrency
+  const activeCurrency = globalCurrency
 
   const bankDataSummary = useMemo(() => {
     if (!clientStatements || clientStatements.length === 0) return null

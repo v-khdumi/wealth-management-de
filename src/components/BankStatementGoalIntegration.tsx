@@ -48,7 +48,7 @@ export function BankStatementGoalIntegration({
   baseCurrency: baseCurrencyProp = 'USD',
 }: BankStatementGoalIntegrationProps) {
   const globalCurrency = useGlobalCurrency()
-  const baseCurrency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : baseCurrencyProp
+  const baseCurrency = globalCurrency.currency
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<string>('')
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
