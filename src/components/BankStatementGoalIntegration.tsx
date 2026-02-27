@@ -20,6 +20,7 @@ import {
   detectUniqueCurrencies,
   formatCurrencyWithCode
 } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 import { callLLM } from '@/lib/azure-openai'
 
 interface BankStatementGoalIntegrationProps {
@@ -44,8 +45,10 @@ export function BankStatementGoalIntegration({
   statements,
   goals,
   onUpdateGoal,
-  baseCurrency = 'USD',
+  baseCurrency: baseCurrencyProp = 'USD',
 }: BankStatementGoalIntegrationProps) {
+  const globalCurrency = useGlobalCurrency()
+  const baseCurrency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : baseCurrencyProp
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiInsights, setAiInsights] = useState<string>('')
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
@@ -209,11 +212,9 @@ Provide 3-5 specific, actionable recommendations on how this user can optimize t
         })
       }
       lines.push('')
-      lines.push('Note: Configure Azure OpenAI for AI-powered personalized recommendations.')
+      lines.push('This is an automated analysis based on your uploaded data.')
       setAiInsights(lines.join('\n'))
-      toast.info('Generated local insights', {
-        description: 'Connect Azure OpenAI for AI-powered analysis'
-      })
+      toast.info('Generated local insights')
     } finally {
       setIsGenerating(false)
     }
