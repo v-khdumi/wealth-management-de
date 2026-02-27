@@ -27,6 +27,7 @@ import {
 } from '@phosphor-icons/react'
 import { useDataStore } from '@/lib/data-store'
 import { useUserCurrency } from '@/hooks/use-user-currency'
+import { useCurrencyConversion } from '@/hooks/use-currency-conversion'
 import { useGlobalCurrency } from '@/lib/currency-context'
 import { isRiskProfileStale, calculateGoalGap, calculateRequiredMonthlyContribution, addProgressSnapshotToGoal } from '@/lib/business-logic'
 import { PortfolioView } from './PortfolioView'
@@ -128,6 +129,12 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
   
   // Use global currency if set to non-default, otherwise use detected user currency
   const activeCurrency = globalCurrency.currency !== 'USD' ? globalCurrency : userCurrency
+  const convert = useCurrencyConversion(activeCurrency.currency)
+
+  // Convert bank statement amounts from their source currency to the active display currency
+  const convertStatement = (amount: number) => convert(amount, userCurrency.currency)
+  // Convert portfolio/goal amounts from USD to the active display currency
+  const convertUSD = (amount: number) => convert(amount, 'USD')
 
   const age = profile?.dateOfBirth
     ? Math.floor((Date.now() - new Date(profile.dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365.25))
@@ -624,7 +631,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
             </CardDescription>
             <div className="text-right">
               <p className="text-base font-display font-bold text-primary wealth-number leading-tight">
-                {formatCurrency(portfolio?.totalValue || 0, activeCurrency.symbol)}
+                {formatCurrency(convertUSD(portfolio?.totalValue || 0), activeCurrency.symbol)}
               </p>
             </div>
           </CardContent>
@@ -762,16 +769,16 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                     <div className="grid grid-cols-4 gap-2">
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Income</p>
-                        <p className="text-sm font-bold text-success">{formatCurrency(statementSummary.totalIncome, activeCurrency.symbol)}</p>
+                        <p className="text-sm font-bold text-success">{formatCurrency(convertStatement(statementSummary.totalIncome), activeCurrency.symbol)}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Expenses</p>
-                        <p className="text-sm font-bold text-destructive">{formatCurrency(statementSummary.totalExpenses, activeCurrency.symbol)}</p>
+                        <p className="text-sm font-bold text-destructive">{formatCurrency(convertStatement(statementSummary.totalExpenses), activeCurrency.symbol)}</p>
                       </div>
                       <div className="text-center">
                         <p className="text-xs text-muted-foreground mb-0.5">Net Saved</p>
                         <p className={`text-sm font-bold ${statementSummary.netSavings >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {formatCurrency(statementSummary.netSavings, activeCurrency.symbol)}
+                          {formatCurrency(convertStatement(statementSummary.netSavings), activeCurrency.symbol)}
                         </p>
                       </div>
                       <div className="text-center">
@@ -1094,11 +1101,11 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                           <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
                             <div>
                               <p className="text-muted-foreground mb-1">Current Savings</p>
-                              <p className="font-semibold text-lg">{formatCurrency(goal.currentAmount, activeCurrency.symbol)}</p>
+                              <p className="font-semibold text-lg">{formatCurrency(convertUSD(goal.currentAmount), activeCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Still Needed</p>
-                              <p className="font-semibold text-lg text-warning">{formatCurrency(gap, activeCurrency.symbol)}</p>
+                              <p className="font-semibold text-lg text-warning">{formatCurrency(convertUSD(gap), activeCurrency.symbol)}</p>
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Target Date</p>
@@ -1106,7 +1113,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                             </div>
                             <div>
                               <p className="text-muted-foreground mb-1">Monthly Saving</p>
-                              <p className="font-semibold">{formatCurrency(goal.monthlyContribution, activeCurrency.symbol)}</p>
+                              <p className="font-semibold">{formatCurrency(convertUSD(goal.monthlyContribution), activeCurrency.symbol)}</p>
                             </div>
                           </div>
 
@@ -1115,7 +1122,7 @@ export function ClientProfile({ clientId }: ClientProfileProps) {
                               <div>
                                 <p className="font-semibold text-warning mb-1">💡 Recommendation</p>
                                 <p className="text-sm">
-                                  Consider increasing your monthly contribution by <strong>{formatCurrency(Math.floor(required - goal.monthlyContribution), activeCurrency.symbol)}</strong> to stay on track for your target date.
+                                  Consider increasing your monthly contribution by <strong>{formatCurrency(convertUSD(Math.floor(required - goal.monthlyContribution)), activeCurrency.symbol)}</strong> to stay on track for your target date.
                                 </p>
                               </div>
                               <Button

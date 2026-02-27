@@ -22,6 +22,8 @@ import {
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
 import { useGlobalCurrency } from '@/lib/currency-context'
+import { useUserCurrency } from '@/hooks/use-user-currency'
+import { useCurrencyConversion } from '@/hooks/use-currency-conversion'
 import { formatCurrency } from '@/lib/utils'
 import {
   generateNextBestActions,
@@ -79,6 +81,10 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
 
   const globalCurrency = useGlobalCurrency()
   const activeCurrency = globalCurrency
+  const userCurrency = useUserCurrency(clientId, bankStatements || [])
+  const convert = useCurrencyConversion(activeCurrency.currency)
+  const convertStatement = (amount: number) => convert(amount, userCurrency.currency)
+  const convertUSD = (amount: number) => convert(amount, 'USD')
 
   const bankDataSummary = useMemo(() => {
     if (!clientStatements || clientStatements.length === 0) return null
@@ -366,19 +372,19 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
               <div className="p-4 rounded-lg bg-success/10 border border-success/20">
                 <p className="text-sm text-muted-foreground mb-1">Total Income</p>
                 <p className="text-2xl font-display font-bold text-success">
-                  {formatCurrency(bankDataSummary.totalIncome, activeCurrency.symbol)}
+                  {formatCurrency(convertStatement(bankDataSummary.totalIncome), activeCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
                 <p className="text-sm text-muted-foreground mb-1">Total Expenses</p>
                 <p className="text-2xl font-display font-bold text-destructive">
-                  {formatCurrency(bankDataSummary.totalExpenses, activeCurrency.symbol)}
+                  {formatCurrency(convertStatement(bankDataSummary.totalExpenses), activeCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
                 <p className="text-sm text-muted-foreground mb-1">Net Savings</p>
                 <p className="text-2xl font-display font-bold text-primary">
-                  {formatCurrency(bankDataSummary.netSavings, activeCurrency.symbol)}
+                  {formatCurrency(convertStatement(bankDataSummary.netSavings), activeCurrency.symbol)}
                 </p>
               </div>
               <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
@@ -480,13 +486,13 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                           <div className="bg-muted/30 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-1">Current Monthly</p>
                             <p className="font-bold text-base wealth-number">
-                              {formatCurrency(goal.monthlyContribution, activeCurrency.symbol)}
+                              {formatCurrency(convertUSD(goal.monthlyContribution), activeCurrency.symbol)}
                             </p>
                           </div>
                           <div className="bg-muted/30 p-3 rounded-lg">
                             <p className="text-xs text-muted-foreground mb-1">Recommended</p>
                             <p className="font-bold text-base wealth-number">
-                              {formatCurrency(Math.ceil(required), activeCurrency.symbol)}
+                              {formatCurrency(convertUSD(Math.ceil(required)), activeCurrency.symbol)}
                             </p>
                           </div>
                         </div>
@@ -510,7 +516,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                                   {shortfall > 500 ? 'Critical Gap' : 'Recommendation'}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Increase by {formatCurrency(Math.ceil(shortfall), activeCurrency.symbol)}/month to reach goal
+                                  Increase by {formatCurrency(convertUSD(Math.ceil(shortfall)), activeCurrency.symbol)}/month to reach goal
                                 </p>
                               </div>
                             </div>
@@ -524,7 +530,7 @@ export function InsightsDashboard({ clientId }: InsightsDashboardProps) {
                               <div className="flex-1">
                                 <p className="text-xs font-semibold text-success">Almost There!</p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                  Just {formatCurrency(Math.ceil(shortfall), activeCurrency.symbol)}/month more to be perfectly on track
+                                  Just {formatCurrency(convertUSD(Math.ceil(shortfall)), activeCurrency.symbol)}/month more to be perfectly on track
                                 </p>
                               </div>
                             </div>
