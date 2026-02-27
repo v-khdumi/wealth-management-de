@@ -41,6 +41,7 @@ import {
   detectUniqueCurrencies,
   CURRENCY_DATABASE 
 } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 import { callLLM } from '@/lib/azure-openai'
 
 interface BankStatementUploadProps {
@@ -61,7 +62,8 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
   const [aiInsights, setAiInsights] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  const [baseCurrency, setBaseCurrency] = useState<string>('USD')
+  const globalCurrency = useGlobalCurrency()
+  const [baseCurrency, setBaseCurrency] = useState<string>(globalCurrency.currency)
   const [exchangeRates, setExchangeRates] = useState<Record<string, number>>({})
   const [isLoadingRates, setIsLoadingRates] = useState(false)
   const [enableCurrencyConversion, setEnableCurrencyConversion] = useState(false)
@@ -69,6 +71,10 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
   
   const availableCurrencies = useMemo(() => detectUniqueCurrencies(statements), [statements])
   
+  useEffect(() => {
+    setBaseCurrency(globalCurrency.currency)
+  }, [globalCurrency.currency])
+
   useEffect(() => {
     const loadRates = async () => {
       setIsLoadingRates(true)
@@ -161,8 +167,8 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       displayCurrency = availableCurrencies[0]
       displaySymbol = getCurrencySymbol(availableCurrencies[0])
     } else {
-      displayCurrency = completedStatements[0]?.extractedData?.currency || 'USD'
-      displaySymbol = completedStatements[0]?.extractedData?.currencySymbol || getCurrencySymbol(displayCurrency)
+      displayCurrency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : (completedStatements[0]?.extractedData?.currency || 'USD')
+      displaySymbol = getCurrencySymbol(displayCurrency)
     }
 
     return {
@@ -175,7 +181,7 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       currency: displayCurrency,
       currencySymbol: displaySymbol
     }
-  }, [statements, enableCurrencyConversion, baseCurrency, exchangeRates, currencyFilter])
+  }, [statements, enableCurrencyConversion, baseCurrency, exchangeRates, currencyFilter, globalCurrency.currency])
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -289,11 +295,9 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
         lines.push('Your savings rate is below recommended levels. Review your top spending categories for potential reductions.')
       }
       lines.push('')
-      lines.push('Note: This is a local summary. Configure Azure OpenAI for personalized AI-powered insights.')
+      lines.push('This is an automated summary based on your uploaded data.')
       setAiInsights(lines.join('\n'))
-      toast.info('Generated local insights', {
-        description: 'Connect Azure OpenAI for AI-powered analysis'
-      })
+      toast.info('Generated local insights')
     } finally {
       setIsGeneratingInsights(false)
     }
@@ -828,7 +832,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                          <Tooltip formatter={(value: number) => `${aggregatedData.currencySymbol}${value.toFixed(2)}`} />
                         </PieChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -844,7 +848,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                           <div key={category.category}>
                             <div className="flex items-center justify-between mb-1">
                               <span className="text-sm font-medium">{category.category}</span>
-                              <span className="text-sm font-semibold">${category.amount.toFixed(0)}</span>
+                              <span className="text-sm font-semibold">{aggregatedData.currencySymbol}{category.amount.toFixed(0)}</span>
                             </div>
                             <Progress value={category.percentage} className="h-2" />
                           </div>
@@ -896,7 +900,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                        <Tooltip formatter={(value: number) => `${aggregatedData.currencySymbol}${value.toLocaleString()}`} />
                         <Legend />
                         <Bar dataKey="income" fill="oklch(0.55 0.15 145)" name="Income" />
                         <Bar dataKey="expenses" fill="oklch(0.55 0.22 25)" name="Expenses" />
@@ -915,7 +919,7 @@ Keep each insight concise (2-3 sentences max). Use the currency symbol ${currenc
                         <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                         <XAxis dataKey="month" />
                         <YAxis />
-                        <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                        <Tooltip formatter={(value: number) => `${aggregatedData.currencySymbol}${value.toLocaleString()}`} />
                         <Legend />
                         <Line 
                           type="monotone" 

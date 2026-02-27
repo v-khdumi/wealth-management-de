@@ -7,6 +7,7 @@ import { Target, TrendUp, TrendDown, Lightbulb, ArrowRight, CheckCircle, Warning
 import { toast } from 'sonner'
 import type { BankStatement, Goal } from '@/lib/types'
 import { getCurrencySymbol } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface GoalTrackingFromStatementsProps {
   statements: BankStatement[]
@@ -22,6 +23,7 @@ export function GoalTrackingFromStatements({
   onCreateGoal 
 }: GoalTrackingFromStatementsProps) {
   const [expandedGoalId, setExpandedGoalId] = useState<string | null>(null)
+  const globalCurrency = useGlobalCurrency()
 
   const spendingAnalysis = useMemo(() => {
     const completedStatements = statements.filter(s => s.status === 'COMPLETED' && s.extractedData)
@@ -52,8 +54,9 @@ export function GoalTrackingFromStatements({
       .sort((a, b) => b.amount - a.amount)
       .slice(0, 5)
 
-    const currency = completedStatements[0]?.extractedData?.currency || 'USD'
-    const currencySymbol = completedStatements[0]?.extractedData?.currencySymbol || getCurrencySymbol(currency)
+    const stmtCurrency = completedStatements[0]?.extractedData?.currency || 'USD'
+    const currency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : stmtCurrency
+    const currencySymbol = getCurrencySymbol(currency)
 
     return {
       avgMonthlyIncome,
@@ -65,7 +68,7 @@ export function GoalTrackingFromStatements({
       currency,
       currencySymbol
     }
-  }, [statements])
+  }, [statements, globalCurrency.currency])
 
   const goalInsights = useMemo(() => {
     if (!spendingAnalysis || goals.length === 0) return []

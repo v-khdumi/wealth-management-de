@@ -11,6 +11,8 @@ import {
 } from '@phosphor-icons/react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import type { BankStatement } from '@/lib/types'
+import { useGlobalCurrency } from '@/lib/currency-context'
+import { getCurrencySymbol } from '@/lib/currency-utils'
 
 interface MultiStatementComparisonProps {
   statements: BankStatement[]
@@ -18,6 +20,10 @@ interface MultiStatementComparisonProps {
 
 export function MultiStatementComparison({ statements }: MultiStatementComparisonProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const globalCurrency = useGlobalCurrency()
+  const stmtCurrency = statements.find(s => s.extractedData?.currency)?.extractedData?.currency || 'USD'
+  const displayCurrency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : stmtCurrency
+  const currencySymbol = getCurrencySymbol(displayCurrency)
 
   const completedStatements = useMemo(() =>
     statements
@@ -143,11 +149,11 @@ export function MultiStatementComparison({ statements }: MultiStatementCompariso
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Avg Monthly Income</p>
-              <p className="text-2xl font-bold">${overallStats?.avgIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-2xl font-bold">{currencySymbol}{overallStats?.avgIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Avg Monthly Expenses</p>
-              <p className="text-2xl font-bold">${overallStats?.avgExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+              <p className="text-2xl font-bold">{currencySymbol}{overallStats?.avgExpenses.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Avg Savings Rate</p>
@@ -189,7 +195,7 @@ export function MultiStatementComparison({ statements }: MultiStatementCompariso
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip 
-                      formatter={(value: number) => `$${value.toLocaleString()}`}
+                      formatter={(value: number) => `${currencySymbol}${value.toLocaleString()}`}
                       contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
                     />
                     <Legend />
@@ -221,7 +227,7 @@ export function MultiStatementComparison({ statements }: MultiStatementCompariso
                           <span className="font-medium">{cat.category}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">
-                              ${cat.average.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+                              {currencySymbol}{cat.average.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
                             </span>
                             <Badge variant={
                               cat.trend > 10 ? 'destructive' :
@@ -252,7 +258,7 @@ export function MultiStatementComparison({ statements }: MultiStatementCompariso
                             <XAxis dataKey="month" />
                             <YAxis />
                             <Tooltip 
-                              formatter={(value: number) => `$${value.toLocaleString()}`}
+                              formatter={(value: number) => `${currencySymbol}${value.toLocaleString()}`}
                               contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
                             />
                             <Line 
@@ -309,7 +315,7 @@ export function MultiStatementComparison({ statements }: MultiStatementCompariso
                       <p className="text-sm text-muted-foreground mb-1">{month.month}</p>
                       <p className="text-xl font-bold">{month.savingsRate.toFixed(1)}%</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        ${month.net.toLocaleString()} saved
+                        {currencySymbol}{month.net.toLocaleString()} saved
                       </p>
                     </CardContent>
                   </Card>

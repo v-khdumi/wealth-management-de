@@ -46,6 +46,8 @@ import {
 import { useDataStore } from '@/lib/data-store'
 import { useAuth } from '@/lib/auth-context'
 import { isAzureOpenAIConnected } from '@/lib/azure-openai'
+import { useGlobalCurrency } from '@/lib/currency-context'
+import { getCurrencySymbol } from '@/lib/currency-utils'
 
 interface BankStatementCopilotProps {
   clientId: string
@@ -106,6 +108,7 @@ const QUICK_PROMPTS = [
 export function BankStatementCopilot({ clientId, statements, onSetGoal, defaultView = 'copilot' }: BankStatementCopilotProps) {
   const { currentUser } = useAuth()
   const { setAiInteractions } = useDataStore()
+  const globalCurrency = useGlobalCurrency()
 
   const [activeView, setActiveView] = useState<'copilot' | 'actions' | 'analytics'>(defaultView)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -126,10 +129,11 @@ export function BankStatementCopilot({ clientId, statements, onSetGoal, defaultV
     const totalExpenses = completedStatements.reduce((s, st) => s + (st.extractedData?.totalExpenses || 0), 0)
     const netSavings = totalIncome - totalExpenses
     const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
-    const currency = completedStatements[0].extractedData?.currency || 'USD'
-    const currencySymbol = completedStatements[0].extractedData?.currencySymbol || '$'
+    const stmtCurrency = completedStatements[0].extractedData?.currency || 'USD'
+    const currency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : stmtCurrency
+    const currencySymbol = getCurrencySymbol(currency)
     return { totalIncome, totalExpenses, netSavings, savingsRate, currency, currencySymbol }
-  }, [completedStatements, hasData])
+  }, [completedStatements, hasData, globalCurrency.currency])
 
   const categoryData = useMemo(() => {
     if (!hasData) return []

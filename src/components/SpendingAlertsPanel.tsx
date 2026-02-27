@@ -17,6 +17,7 @@ import {
 } from '@phosphor-icons/react'
 import { toast } from 'sonner'
 import type { BankStatement, CategoryBudget, SpendingAlert } from '@/lib/types'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface SpendingAlertsPanelProps {
   userId: string
@@ -39,6 +40,7 @@ export function SpendingAlertsPanel({
   const [selectedCategory, setSelectedCategory] = useState('')
   const [budgetLimit, setBudgetLimit] = useState('')
   const [alertThreshold, setAlertThreshold] = useState('80')
+  const globalCurrency = useGlobalCurrency()
 
   const completedStatements = useMemo(() => 
     statements.filter(s => s.status === 'COMPLETED' && s.extractedData),
@@ -105,7 +107,7 @@ export function SpendingAlertsPanel({
     setAlertThreshold('80')
     
     toast.success('Budget set successfully', {
-      description: `Alert will trigger at ${threshold}% of $${limit.toLocaleString()}`
+      description: `Alert will trigger at ${threshold}% of ${globalCurrency.symbol}${limit.toLocaleString()}`
     })
   }
 
@@ -150,7 +152,7 @@ export function SpendingAlertsPanel({
                   </select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="limit">Monthly Budget Limit ($)</Label>
+                  <Label htmlFor="limit">Monthly Budget Limit ({globalCurrency.symbol})</Label>
                   <Input
                     id="limit"
                     type="number"
@@ -207,8 +209,8 @@ export function SpendingAlertsPanel({
                       <div className="flex-1">
                         <p className="font-semibold mb-1">{alert.category}</p>
                         <p className="text-sm">
-                          Spent <span className="font-semibold">${alert.currentSpending.toLocaleString()}</span>
-                          {' '}of ${alert.budgetLimit.toLocaleString()} budget
+                          Spent <span className="font-semibold">{globalCurrency.symbol}{alert.currentSpending.toLocaleString()}</span>
+                          {' '}of {globalCurrency.symbol}{alert.budgetLimit.toLocaleString()} budget
                           <Badge variant={alert.severity === 'CRITICAL' ? 'destructive' : 'secondary'} className="ml-2">
                             {alert.percentage.toFixed(0)}%
                           </Badge>
@@ -247,7 +249,7 @@ export function SpendingAlertsPanel({
                             <span className="font-medium">{budget.category}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold">
-                                ${currentSpending.toLocaleString()} / ${budget.monthlyLimit.toLocaleString()}
+                                {globalCurrency.symbol}{currentSpending.toLocaleString()} / {globalCurrency.symbol}{budget.monthlyLimit.toLocaleString()}
                               </span>
                               {isWarning && (
                                 <Badge variant={isCritical ? 'destructive' : 'secondary'}>

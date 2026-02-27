@@ -9,6 +9,7 @@ import { TrendUp, TrendDown, CurrencyCircleDollar, ChartLine, Calendar, Download
 import { toast } from 'sonner'
 import type { BankStatement } from '@/lib/types'
 import { getCurrencySymbol, getCurrencyName, detectUniqueCurrencies } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface CurrencySpendingTrendsProps {
   statements: BankStatement[]
@@ -26,6 +27,7 @@ const COLORS = [
 export function CurrencySpendingTrends({ statements }: CurrencySpendingTrendsProps) {
   const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL')
   const [timeRange, setTimeRange] = useState<'3M' | '6M' | '12M' | 'ALL'>('6M')
+  const globalCurrency = useGlobalCurrency()
 
   const availableCurrencies = useMemo(() => detectUniqueCurrencies(statements), [statements])
 
@@ -161,10 +163,10 @@ export function CurrencySpendingTrends({ statements }: CurrencySpendingTrendsPro
       netSavings,
       savingsRate,
       statementCount,
-      currencySymbol: selectedCurrency !== 'ALL' ? getCurrencySymbol(selectedCurrency) : '$',
-      currencyCode: selectedCurrency !== 'ALL' ? selectedCurrency : 'Mixed'
+      currencySymbol: selectedCurrency !== 'ALL' ? getCurrencySymbol(selectedCurrency) : getCurrencySymbol(globalCurrency.currency),
+      currencyCode: selectedCurrency !== 'ALL' ? selectedCurrency : globalCurrency.currency
     }
-  }, [filteredData, selectedCurrency])
+  }, [filteredData, selectedCurrency, globalCurrency.currency])
 
   const handleExportCurrencyReport = () => {
     if (!summaryStats) {
