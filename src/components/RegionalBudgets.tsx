@@ -26,6 +26,7 @@ import {
   getCurrencyName,
   CURRENCY_DATABASE,
 } from '@/lib/currency-utils'
+import { useGlobalCurrency } from '@/lib/currency-context'
 
 interface RegionalBudgetsProps {
   userId: string
@@ -69,11 +70,12 @@ export function RegionalBudgets({
   onUpdateBudget,
   onDeleteBudget,
 }: RegionalBudgetsProps) {
+  const globalCurrency = useGlobalCurrency()
   const [isCreating, setIsCreating] = useState(false)
   const [editingBudget, setEditingBudget] = useState<RegionalBudget | null>(null)
   const [newBudget, setNewBudget] = useState({
     region: '',
-    currency: 'USD',
+    currency: globalCurrency.currency,
     monthlyTotal: 0,
     categories: [] as CategoryBudget[],
   })
@@ -161,7 +163,7 @@ export function RegionalBudgets({
 
     setNewBudget({
       region: '',
-      currency: 'USD',
+      currency: globalCurrency.currency,
       monthlyTotal: 0,
       categories: [],
     })

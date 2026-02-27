@@ -167,7 +167,7 @@ export function BankStatementUpload({ statements, onUpload, onProcess, onDelete 
       displayCurrency = availableCurrencies[0]
       displaySymbol = getCurrencySymbol(availableCurrencies[0])
     } else {
-      displayCurrency = globalCurrency.currency !== 'USD' ? globalCurrency.currency : (completedStatements[0]?.extractedData?.currency || 'USD')
+      displayCurrency = globalCurrency.currency
       displaySymbol = getCurrencySymbol(displayCurrency)
     }
 
