@@ -63,7 +63,7 @@ Make sure to return realistic, current exchange rates. Return ONLY the JSON obje
   }
 }
 
-function getDefaultExchangeRates(baseCurrency: string): Record<string, number> {
+export function getDefaultExchangeRates(baseCurrency: string): Record<string, number> {
   const defaultRatesFromUSD: Record<string, number> = {
     USD: 1,
     EUR: 0.92,
