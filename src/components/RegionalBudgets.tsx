@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
 import { Button } from './ui/button'
 import { Badge } from './ui/badge'
@@ -79,6 +79,10 @@ export function RegionalBudgets({
     monthlyTotal: 0,
     categories: [] as CategoryBudget[],
   })
+
+  useEffect(() => {
+    setNewBudget(prev => ({ ...prev, currency: globalCurrency.currency }))
+  }, [globalCurrency.currency])
 
   const budgetUtilization = useMemo(() => {
     const utilization: Record<string, { spent: number; budget: number; categories: Record<string, { spent: number; budget: number }> }> = {}

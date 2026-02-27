@@ -71,16 +71,16 @@ export function MultiCurrencySpendingComparison({ statements }: MultiCurrencySpe
   const [selectedCurrency, setSelectedCurrency] = useState<string>('ALL')
   const [chartView, setChartView] = useState<'by-currency' | 'by-category' | 'timeline' | 'radar'>('by-currency')
 
-  useEffect(() => {
-    setBaseCurrency(globalCurrency.currency)
-  }, [globalCurrency.currency])
-
   const availableCurrencies = useMemo(() => detectUniqueCurrencies(statements), [statements])
 
   const completedStatements = useMemo(
     () => statements.filter(s => s.status === 'COMPLETED' && s.extractedData),
     [statements]
   )
+
+  useEffect(() => {
+    setBaseCurrency(globalCurrency.currency)
+  }, [globalCurrency.currency])
 
   useEffect(() => {
     const loadRates = async () => {
