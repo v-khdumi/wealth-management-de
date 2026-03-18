@@ -20,7 +20,7 @@ After deployment completes, **configure GitHub Actions CI/CD** by adding the fol
 | `VITE_AZURE_OPENAI_ENDPOINT` | Deployment output `VITE_AZURE_OPENAI_ENDPOINT`, or Azure Portal → OpenAI resource → **Endpoint** |
 | `VITE_AZURE_OPENAI_API_KEY` | Azure Portal → OpenAI resource → Keys and Endpoint → **Key 1** |
 
-> **Optional secrets** (defaults are used if not set): `VITE_AZURE_OPENAI_API_VERSION`, `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O`, `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI`
+> **Optional secrets** (defaults are used if not set): `VITE_AZURE_OPENAI_API_VERSION` (default: `2024-08-01-preview`), `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O` (default: `gpt-4o`), `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI` (default: `gpt-4o-mini`)
 
 Once the secrets are configured, push to `main` (or trigger the workflow manually) to build and deploy the application.
 
