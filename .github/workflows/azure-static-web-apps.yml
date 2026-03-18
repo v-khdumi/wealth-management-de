@@ -36,6 +36,12 @@ jobs:
 
       - name: Build application
         run: npm run build
+        env:
+          VITE_AZURE_OPENAI_ENDPOINT: ${{ secrets.VITE_AZURE_OPENAI_ENDPOINT }}
+          VITE_AZURE_OPENAI_API_KEY: ${{ secrets.VITE_AZURE_OPENAI_API_KEY }}
+          VITE_AZURE_OPENAI_API_VERSION: ${{ secrets.VITE_AZURE_OPENAI_API_VERSION }}
+          VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O: ${{ secrets.VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O }}
+          VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI: ${{ secrets.VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI }}
 
       - name: Deploy to Azure Static Web Apps
         id: deploy
