@@ -611,7 +611,7 @@ If the question cannot be answered from the data, say so clearly.`
     } else if (questionLower.includes('income') || questionLower.includes('earn') || questionLower.includes('salary')) {
       lines.push(`Here's your income summary from ${completed.length} statement(s):`)
       lines.push(`• Total income: ${totalIncome.toLocaleString()} ${currency}`)
-      lines.push(`• Monthly average: ${Math.round(totalIncome / completed.length).toLocaleString()} ${currency}`)
+      lines.push(`• Monthly average: ${Math.round(totalIncome / Math.max(completed.length, 1)).toLocaleString()} ${currency}`)
       lines.push(`• After expenses: ${netSavings.toLocaleString()} ${currency} net savings`)
     } else if (questionLower.includes('saving') || questionLower.includes('save')) {
       lines.push(`Here's your savings analysis from ${completed.length} statement(s):`)
@@ -626,7 +626,7 @@ If the question cannot be answered from the data, say so clearly.`
     } else if (questionLower.includes('goal') || questionLower.includes('target') || questionLower.includes('track')) {
       lines.push(`Based on your ${completed.length} statement(s):`)
       lines.push(`• Current savings rate: ${savingsRate.toFixed(1)}%`)
-      lines.push(`• Monthly net savings: ${Math.round(netSavings / completed.length).toLocaleString()} ${currency}`)
+      lines.push(`• Monthly net savings: ${Math.round(netSavings / Math.max(completed.length, 1)).toLocaleString()} ${currency}`)
       if (savingsRate >= 20) {
         lines.push('\nWith a savings rate above 20%, you are on a solid path toward typical financial goals.')
       } else {
