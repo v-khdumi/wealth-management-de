@@ -204,6 +204,7 @@ INSTRUCTIONS:
       offlineMode: false,
     }
   } catch (error) {
+    console.warn('[AI Service] LLM call failed, using offline fallback:', error instanceof Error ? error.message : error)
     return generateOfflineResponse(userPrompt, facts)
   }
 }
@@ -270,8 +271,8 @@ function generateOfflineResponse(prompt: string, facts: FactsPacket): AiResponse
   return {
     content: lines.join('\n'),
     sources: extractSources(facts),
-    model: 'gpt-4o-mini',
-    offlineMode: false,
+    model: 'offline',
+    offlineMode: true,
   }
 }
 
@@ -583,24 +584,85 @@ If the question cannot be answered from the data, say so clearly.`
       model: 'gpt-4o-mini',
       offlineMode: false,
     }
-  } catch {
-    // Offline fallback
-    const lines: string[] = [
-      `Based on your ${completed.length} uploaded statement(s):`,
-      `• Total income: ${totalIncome.toLocaleString()} ${currency}`,
-      `• Total expenses: ${totalExpenses.toLocaleString()} ${currency}`,
-      `• Net savings: ${netSavings.toLocaleString()} ${currency} (${savingsRate.toFixed(1)}% savings rate)`,
-    ]
-    if (Object.keys(categoryTotals).length > 0) {
-      const top = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]
-      lines.push(`• Largest spending category: ${top[0]} (${top[1].toLocaleString()} ${currency})`)
+  } catch (error) {
+    // Log the error so developers can diagnose Azure OpenAI issues
+    console.warn('[AI Service] LLM call failed, using offline fallback:', error instanceof Error ? error.message : error)
+
+    const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])
+    const topCategory = sortedCategories[0]
+    const questionLower = question.toLowerCase()
+
+    const lines: string[] = []
+
+    // Generate a question-specific offline response instead of a generic summary
+    if (questionLower.includes('expense') || questionLower.includes('spend') || questionLower.includes('cost') || questionLower.includes('cut')) {
+      lines.push(`Here's a breakdown of your spending from ${completed.length} statement(s):`)
+      lines.push(`• Total expenses: ${totalExpenses.toLocaleString()} ${currency}`)
+      if (sortedCategories.length > 0) {
+        lines.push('\nSpending by category:')
+        for (const [cat, amount] of sortedCategories) {
+          const pct = totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : '0'
+          lines.push(`• ${cat}: ${amount.toLocaleString()} ${currency} (${pct}%)`)
+        }
+      }
+      if (questionLower.includes('cut') || questionLower.includes('reduce') || questionLower.includes('save')) {
+        lines.push('\nTo reduce spending, consider reviewing your largest expense categories above for potential savings.')
+      }
+    } else if (questionLower.includes('income') || questionLower.includes('earn') || questionLower.includes('salary')) {
+      lines.push(`Here's your income summary from ${completed.length} statement(s):`)
+      lines.push(`• Total income: ${totalIncome.toLocaleString()} ${currency}`)
+      lines.push(`• Monthly average: ${Math.round(totalIncome / completed.length).toLocaleString()} ${currency}`)
+      lines.push(`• After expenses: ${netSavings.toLocaleString()} ${currency} net savings`)
+    } else if (questionLower.includes('saving') || questionLower.includes('save')) {
+      lines.push(`Here's your savings analysis from ${completed.length} statement(s):`)
+      lines.push(`• Net savings: ${netSavings.toLocaleString()} ${currency}`)
+      lines.push(`• Savings rate: ${savingsRate.toFixed(1)}%`)
+      lines.push(`• Income: ${totalIncome.toLocaleString()} ${currency} | Expenses: ${totalExpenses.toLocaleString()} ${currency}`)
+      if (savingsRate >= 20) {
+        lines.push('\nYour savings rate is healthy — above the commonly recommended 20% benchmark.')
+      } else if (savingsRate > 0) {
+        lines.push('\nConsider aiming for a 20% savings rate for long-term financial health.')
+      }
+    } else if (questionLower.includes('goal') || questionLower.includes('target') || questionLower.includes('track')) {
+      lines.push(`Based on your ${completed.length} statement(s):`)
+      lines.push(`• Current savings rate: ${savingsRate.toFixed(1)}%`)
+      lines.push(`• Monthly net savings: ${Math.round(netSavings / completed.length).toLocaleString()} ${currency}`)
+      if (savingsRate >= 20) {
+        lines.push('\nWith a savings rate above 20%, you are on a solid path toward typical financial goals.')
+      } else {
+        lines.push('\nConsider setting specific savings targets and tracking progress month over month.')
+      }
+    } else if (questionLower.includes('break') || questionLower.includes('categor') || questionLower.includes('detail') || questionLower.includes('overview') || questionLower.includes('summary')) {
+      lines.push(`Financial overview from ${completed.length} statement(s):`)
+      lines.push(`• Total income: ${totalIncome.toLocaleString()} ${currency}`)
+      lines.push(`• Total expenses: ${totalExpenses.toLocaleString()} ${currency}`)
+      lines.push(`• Net savings: ${netSavings.toLocaleString()} ${currency} (${savingsRate.toFixed(1)}%)`)
+      if (sortedCategories.length > 0) {
+        lines.push('\nExpense categories:')
+        for (const [cat, amount] of sortedCategories) {
+          const pct = totalExpenses > 0 ? ((amount / totalExpenses) * 100).toFixed(1) : '0'
+          lines.push(`• ${cat}: ${amount.toLocaleString()} ${currency} (${pct}%)`)
+        }
+      }
+    } else {
+      // General fallback for unrecognized questions
+      lines.push(`Based on your ${completed.length} uploaded statement(s):`)
+      lines.push(`• Total income: ${totalIncome.toLocaleString()} ${currency}`)
+      lines.push(`• Total expenses: ${totalExpenses.toLocaleString()} ${currency}`)
+      lines.push(`• Net savings: ${netSavings.toLocaleString()} ${currency} (${savingsRate.toFixed(1)}% savings rate)`)
+      if (topCategory) {
+        lines.push(`• Largest spending category: ${topCategory[0]} (${topCategory[1].toLocaleString()} ${currency})`)
+      }
+      lines.push('\nFor more specific answers, please try asking about your expenses, income, savings, or spending categories.')
     }
-    lines.push('\nNote: This is a summary based on your uploaded data, not financial advice.')
+
+    lines.push('\nNote: AI service is currently unavailable. This is an automated summary based on your uploaded data, not financial advice.')
+
     return {
       content: lines.join('\n'),
       sources: [`${completed.length} statement(s)`, `${allTransactions.length} transactions`],
-      model: 'gpt-4o-mini',
-      offlineMode: false,
+      model: 'offline',
+      offlineMode: true,
     }
   }
 }
