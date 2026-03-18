@@ -393,23 +393,38 @@
   "outputs": {
     "staticWebAppUrl": {
       "type": "string",
-      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01').defaultHostname)]"
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/staticSites', parameters('appName')), '2022-09-01').defaultHostname)]",
+      "metadata": {
+        "description": "URL of the deployed Static Web App"
+      }
     },
-    "staticWebAppId": {
+    "staticWebAppName": {
       "type": "string",
-      "value": "[resourceId('Microsoft.Web/staticSites', parameters('appName'))]"
+      "value": "[parameters('appName')]",
+      "metadata": {
+        "description": "Name of the Static Web App — use to retrieve the deployment token via: az staticwebapp secrets list --name <this-value> --resource-group <rg>"
+      }
     },
-    "openAIEndpoint": {
+    "VITE_AZURE_OPENAI_ENDPOINT": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName')), '2023-10-01-preview').endpoint]"
+      "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('openAIAccountName')), '2023-10-01-preview').endpoint]",
+      "metadata": {
+        "description": "Add this as a GitHub Secret named VITE_AZURE_OPENAI_ENDPOINT"
+      }
     },
-    "openAIDeploymentGpt4o": {
+    "VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O": {
       "type": "string",
-      "value": "gpt-4o"
+      "value": "gpt-4o",
+      "metadata": {
+        "description": "Add this as a GitHub Secret named VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O"
+      }
     },
-    "openAIDeploymentGpt4oMini": {
+    "VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI": {
       "type": "string",
-      "value": "gpt-4o-mini"
+      "value": "gpt-4o-mini",
+      "metadata": {
+        "description": "Add this as a GitHub Secret named VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI"
+      }
     },
     "cosmosEndpoint": {
       "type": "string",
@@ -426,6 +441,10 @@
     "storageAccountName": {
       "type": "string",
       "value": "[variables('storageAccountName')]"
+    },
+    "nextSteps": {
+      "type": "string",
+      "value": "After deployment: 1) Get deployment token: az staticwebapp secrets list --name <appName> --resource-group <rg>. 2) Add these GitHub Secrets: AZURE_STATIC_WEB_APPS_API_TOKEN (deployment token), VITE_AZURE_OPENAI_ENDPOINT (see output), VITE_AZURE_OPENAI_API_KEY (get from Azure Portal > OpenAI resource > Keys). 3) Push to main to trigger deployment."
     }
   }
 }

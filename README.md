@@ -12,19 +12,31 @@ Click the **Deploy to Azure** button above. You'll need:
 - A resource group (or create one)
 - Your GitHub repository URL and a [Personal Access Token](https://github.com/settings/tokens) with `repo` scope
 
-After deployment completes, retrieve the **Static Web App deployment token** to configure GitHub Actions CI/CD:
-- **Azure Portal**: Go to your Static Web App → Overview → **Manage deployment token**
-- **Azure CLI**: `az staticwebapp secrets list --name <appName> --resource-group <rg>`
+After deployment completes, **configure GitHub Actions CI/CD** by adding the following **GitHub Secrets** (Settings → Secrets and variables → Actions → New repository secret):
 
-Add the token as a GitHub secret named `AZURE_STATIC_WEB_APPS_API_TOKEN` to enable automatic deployments on push.
+| GitHub Secret Name | Where to Find the Value |
+|---|---|
+| `AZURE_STATIC_WEB_APPS_API_TOKEN` | Azure Portal → Static Web App → Overview → **Manage deployment token** |
+| `VITE_AZURE_OPENAI_ENDPOINT` | Deployment output `VITE_AZURE_OPENAI_ENDPOINT`, or Azure Portal → OpenAI resource → **Endpoint** |
+| `VITE_AZURE_OPENAI_API_KEY` | Azure Portal → OpenAI resource → Keys and Endpoint → **Key 1** |
+
+> **Optional secrets** (defaults are used if not set): `VITE_AZURE_OPENAI_API_VERSION` (default: `2024-08-01-preview`), `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O` (default: `gpt-4o`), `VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI` (default: `gpt-4o-mini`)
+
+Once the secrets are configured, push to `main` (or trigger the workflow manually) to build and deploy the application.
 
 ### Option 2 — GitHub Actions (Recommended for CI/CD)
 1. Create an **Azure Static Web App** in the Azure Portal:
    - Go to [portal.azure.com](https://portal.azure.com) → Create Resource → Static Web App
-   - Choose **Free** tier, connect to this GitHub repository, set build preset to **Vite**
+   - Choose **Free** or **Standard** tier, connect to this GitHub repository, set build preset to **Vite**
    - Copy the **Deployment Token** from the resource overview
-2. Add a GitHub secret named `AZURE_STATIC_WEB_APPS_API_TOKEN` with the token value
-3. Push to `main` — the `.github/workflows/azure-static-web-apps.yml` workflow deploys automatically
+2. Create an **Azure OpenAI** resource:
+   - Go to [portal.azure.com](https://portal.azure.com) → Create Resource → Azure OpenAI
+   - Deploy `gpt-4o-mini` and `gpt-4o` models
+3. Add the following **GitHub Secrets**:
+   - `AZURE_STATIC_WEB_APPS_API_TOKEN` — from step 1
+   - `VITE_AZURE_OPENAI_ENDPOINT` — your Azure OpenAI endpoint URL
+   - `VITE_AZURE_OPENAI_API_KEY` — your Azure OpenAI API key
+4. Push to `main` — the `.github/workflows/azure-static-web-apps.yml` workflow deploys automatically
 
 ### Option 3 — Azure CLI (Bicep template)
 ```bash

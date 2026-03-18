@@ -307,11 +307,22 @@ resource staticWebAppSettings 'Microsoft.Web/staticSites/config@2022-09-01' = {
 // avoid exposing secrets in deployment history. Retrieve it after deployment via:
 //   Azure Portal → Static Web App → Overview → Manage deployment token
 //   OR: az staticwebapp secrets list --name <appName> --resource-group <rg>
+
+@description('URL of the deployed Static Web App')
 output staticWebAppUrl string = 'https://${staticWebApp.properties.defaultHostname}'
-output staticWebAppId string = staticWebApp.id
-output openAIEndpoint string = openAI.properties.endpoint
-output openAIDeploymentGpt4o string = gpt4oDeployment.name
-output openAIDeploymentGpt4oMini string = gpt4oMiniDeployment.name
+
+@description('Name of the Static Web App — use to retrieve the deployment token')
+output staticWebAppName string = staticWebApp.name
+
+@description('Add this as a GitHub Secret named VITE_AZURE_OPENAI_ENDPOINT')
+output VITE_AZURE_OPENAI_ENDPOINT string = openAI.properties.endpoint
+
+@description('Add this as a GitHub Secret named VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O')
+output VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O string = gpt4oDeployment.name
+
+@description('Add this as a GitHub Secret named VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI')
+output VITE_AZURE_OPENAI_DEPLOYMENT_GPT4O_MINI string = gpt4oMiniDeployment.name
+
 output cosmosEndpoint string = cosmosAccount.properties.documentEndpoint
 output cosmosDatabase string = cosmosDatabase.name
 output keyVaultUri string = keyVault.properties.vaultUri
