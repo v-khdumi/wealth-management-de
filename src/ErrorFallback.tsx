@@ -1,13 +1,15 @@
+import type { FallbackProps } from "react-error-boundary";
 import { Alert, AlertTitle, AlertDescription } from "./components/ui/alert";
 import { Button } from "./components/ui/button";
 
 import { AlertTriangleIcon, RefreshCwIcon } from "lucide-react";
 
-export const ErrorFallback = ({ error, resetErrorBoundary }) => {
-  // When encountering an error in the development mode, rethrow it and don't display the boundary.
-  // The parent UI will take care of showing a more helpful dialog.
+export const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
+  // Preserve the development dialog and its original exception.
   if (import.meta.env.DEV) throw error;
 
+  // Do not read or render exception properties in production. Messages and
+  // stacks can contain financial data, credentials, or upstream response bodies.
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -15,19 +17,12 @@ export const ErrorFallback = ({ error, resetErrorBoundary }) => {
           <AlertTriangleIcon />
           <AlertTitle>This spark has encountered a runtime error</AlertTitle>
           <AlertDescription>
-            Something unexpected happened while running the application. The error details are shown below. Contact the spark author and let them know about this issue.
+            Something unexpected happened while running the application. Please try again. If the problem persists, contact the spark author without including passwords or financial account details.
           </AlertDescription>
         </Alert>
-        
-        <div className="bg-card border rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-sm text-muted-foreground mb-2">Error Details:</h3>
-          <pre className="text-xs text-destructive bg-muted/50 p-3 rounded border overflow-auto max-h-32">
-            {error.message}
-          </pre>
-        </div>
-        
-        <Button 
-          onClick={resetErrorBoundary} 
+
+        <Button
+          onClick={resetErrorBoundary}
           className="w-full"
           variant="outline"
         >

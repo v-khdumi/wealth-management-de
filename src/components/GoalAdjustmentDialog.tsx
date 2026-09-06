@@ -27,6 +27,7 @@ import type { Goal } from '@/lib/types'
 import { calculateGoalGap, calculateRequiredMonthlyContribution } from '@/lib/business-logic'
 import { toast } from 'sonner'
 import { callLLM } from '@/lib/azure-openai'
+import { isValidContribution, parseContributionRecommendation } from '@/lib/contribution-validation'
 
 interface GoalAdjustmentDialogProps {
   goal: Goal
@@ -95,6 +96,11 @@ export function GoalAdjustmentDialog({
   }
 
   const handleSave = () => {
+    if (!isValidContribution(newContribution)) {
+      toast.error('Please enter a valid contribution amount')
+      return
+    }
+
     onSave(goal.id, newContribution)
     toast.success('Goal Updated', {
       description: `Monthly contribution set to $${newContribution.toLocaleString()}`,
@@ -103,7 +109,13 @@ export function GoalAdjustmentDialog({
   }
 
   const handleSetToRecommended = () => {
-    setNewContribution(Math.ceil(requiredMonthly))
+    const recommended = Math.ceil(requiredMonthly)
+    if (!isValidContribution(recommended)) {
+      toast.error('Could not calculate a valid contribution')
+      return
+    }
+
+    setNewContribution(recommended)
     toast.info('Set to Recommended', {
       description: 'Adjusted to meet your target date',
     })
@@ -132,19 +144,27 @@ Respond with ONLY a JSON object: {"recommendedContribution": <number>, "reasonin
 The recommendedContribution must be a whole number.`
 
       const response = await callLLM(promptText, 'gpt-4o-mini', true)
-      let jsonStr = response.trim()
-      const mdMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
-      if (mdMatch) jsonStr = mdMatch[1].trim()
-      const result = JSON.parse(jsonStr)
+      const result = parseContributionRecommendation(response)
+      // Preserve the existing zero-response fallback and upward rounding.
       const optimized = Math.ceil(result.recommendedContribution || requiredMonthly * 1.05)
+      if (!isValidContribution(optimized)) {
+        throw new Error('Invalid contribution recommendation')
+      }
       setNewContribution(optimized)
       
       toast.success('AI Optimization Complete', {
         description: result.reasoning || `Suggested $${optimized.toLocaleString()}/month`,
       })
     } catch (error) {
-      console.error('AI optimization error:', error)
+      // Upstream errors may contain private response bodies or credentials.
+      if (import.meta.env.DEV) console.error('AI optimization error:', error)
       const optimized = Math.ceil(requiredMonthly * 1.05)
+      if (!isValidContribution(optimized)) {
+        toast.error('Could not calculate a valid contribution', {
+          description: 'Please review the goal details and try again',
+        })
+        return
+      }
       setNewContribution(optimized)
       toast.success('Optimization Complete', {
         description: `Suggested $${optimized.toLocaleString()}/month with 5% buffer`,
@@ -236,7 +256,9 @@ The recommendedContribution must be a whole number.`
                 max={maxContribution}
                 step={50}
                 value={[newContribution]}
-                onValueChange={(values) => setNewContribution(values[0])}
+                onValueChange={(values) => {
+                  if (isValidContribution(values[0])) setNewContribution(values[0])
+                }}
                 className="w-full"
               />
 

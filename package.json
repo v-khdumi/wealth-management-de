@@ -6,7 +6,9 @@
     "scripts": {
         "dev": "vite",
         "kill": "fuser -k 5000/tcp",
-        "build": "tsc -b --noCheck && vite build",
+        "build": "tsc -b --noCheck && vite build && npm run build --workspace=@wealth-management/backend",
+        "pretest": "npm test --workspace=@wealth-management/backend",
+        "test": "vitest --config tests/vitest.config.mjs",
         "lint": "eslint .",
         "optimize": "vite optimize",
         "preview": "vite preview"
@@ -75,6 +77,10 @@
         "zod": "^3.25.76"
     },
     "devDependencies": {
+        "vitest": "^3.2.0",
+        "jsdom": "^27.0.0",
+        "@testing-library/react": "^16.0.0",
+        "@testing-library/dom": "^10.0.0",
         "@eslint/js": "^9.21.0",
         "@tailwindcss/postcss": "^4.1.8",
         "@types/react": "^19.0.10",
@@ -91,7 +97,8 @@
     },
     "workspaces": {
         "packages": [
-            "packages/*"
+            "packages/*",
+            "services/backend"
         ]
     }
 }
