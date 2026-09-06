@@ -1,0 +1,35 @@
+name: Cloud readiness
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Compile Azure template without cloud login
+        shell: bash
+        run: |
+          set -euo pipefail
+          az bicep install
+          az bicep build --file platform/azure/main.bicep --outfile "$RUNNER_TEMP/wealth-cloud.json"
+      - name: Build local container without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build --pull --file platform/web.Dockerfile --tag wealth-web:validation .
